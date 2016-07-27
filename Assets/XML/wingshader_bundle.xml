@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<KSPBundleDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" UrlName="wingshader" Name="wingshader" CreatedTime="-8587390332545390046">
+<KSPBundleDefinition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" UrlName="wingshader" Name="wingshader" CreatedTime="-8587329529311136374">
   <Author />
   <Info />
   <Assets>
-    <Asset Name="KSP/Specular Layered" Path="Assets/PWings Assets/Compiled.shader" Type="Shader" Url="PWings Assets/Compiled" AutoLoad="false" />
+    <Asset Name="KSP/Specular Layered" Path="Assets/PWings Assets/SpecularLayered_fix2.shader" Type="Shader" Url="PWings Assets/SpecularLayered_fix2" AutoLoad="false" />
   </Assets>
   <Dependencies />
 </KSPBundleDefinition>

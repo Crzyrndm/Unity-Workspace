@@ -24,36 +24,31 @@ Shader "KSP/Specular Layered"
 		Tags{ "RenderType" = "Opaque" }
 		ZWrite On
 		ZTest LEqual
-//		Blend SrcAlpha OneMinusSrcAlpha 
-
-		// We're not alphatransparent anywhere; if there's ever wing parts with transparency ( nav/landing light covers perhaps )
-		// it would be unlikely that they'd use this shader.
-		Blend Off
+		Blend SrcAlpha OneMinusSrcAlpha 
 
 		CGPROGRAM
 
-//		#pragma surface surf BlinnPhong
-
 		// Unity5 firefly fix
-		#pragma surface surf NormalizedBlinnPhong
+		#pragma surface surf NormalizedBlinnPhong keepalpha
 		#pragma target 3.0
 		
 		// Unity5 firefly fix
 		// U5 lighting function doesn't normalize properly, so we have to write our own...
-		// mostly borrowed from a unity forum post, which was borrowed from one of the mobile shaders.
+		// borrowed bits of Unity BlinnPhong functions
 
-		fixed4 LightingNormalizedBlinnPhong(SurfaceOutput s, fixed3 lightDir, fixed3 viewDir, fixed atn)
+		inline fixed4 LightingNormalizedBlinnPhong(SurfaceOutput s, half3 lightDir, half3 viewDir, half atn)
 		{
-			fixed3 nN = normalize(s.Normal);
+			fixed3 normalizedSurfNormal = normalize(s.Normal);
 			fixed3 halfDir = normalize(lightDir + viewDir);
 
-			fixed diff = max(0, dot(nN, lightDir));
-			fixed nh = max(0, dot(nN, halfDir));
+			fixed diff = max(0, dot(normalizedSurfNormal, lightDir));
+
+			fixed nh = max(0, dot(normalizedSurfNormal, halfDir));
 			fixed spec = pow(nh, s.Specular * 128) * s.Gloss;
 
 			fixed4 c;
-			c.rgb = (_LightColor0.rgb * ((s.Albedo * diff) + spec)) * atn;
-			UNITY_OPAQUE_ALPHA(c.a);
+			c.rgb = (_LightColor0.rgb * ((s.Albedo * diff) + ( spec *_SpecColor.rgb ))) * atn;
+			c.a = s.Alpha + _LightColor0.a * _SpecColor.a * spec * atn;
 			return c;
 		}
 
@@ -142,5 +137,5 @@ Shader "KSP/Specular Layered"
 		}
 		ENDCG
 	}
-	Fallback "Diffuse"
+	Fallback "Specular"
 }
