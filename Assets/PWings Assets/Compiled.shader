@@ -1,4 +1,4 @@
-﻿// Compiled shader for all platforms, uncompressed size: 529.0KB
+﻿// Compiled shader for all platforms, uncompressed size: 552.2KB
 
 // Skipping shader variants that would not be included into build of current scene.
 
@@ -11,6 +11,8 @@ Shader "KSP/Specular Layered" {
 		_Opacity("_Opacity", Range(0,1)) = 1
 		_RimFalloff("_RimFalloff", Range(0.01,5)) = 0.1
 		_RimColor("_RimColor", Color) = (0,0,0,0)
+		_TemperatureColor("_TemperatureColor", Color) = (0,0,0,0)
+		_BurnColor("Burn Color", Color) = (1,1,1,1)
 	}
 		SubShader{
 		Tags{ "RenderType" = "Opaque" }
@@ -19,20 +21,21 @@ Shader "KSP/Specular Layered" {
 		// Stats for Vertex shader:
 		//       d3d11 : 56 avg math (45..68)
 		//        d3d9 : 66 avg math (48..84)
-		//        gles : 59 avg math (56..61), 2 avg texture (2..3)
+		//        gles : 64 avg math (61..67), 2 avg texture (2..3)
 		//       metal : 48 avg math (33..64)
-		//      opengl : 56 avg math (56..57), 2 avg texture (2..3)
+		//      opengl : 62 avg math (61..63), 2 avg texture (2..3)
 		// Stats for Fragment shader:
-		//       d3d11 : 55 avg math (54..56), 2 avg texture (2..3)
-		//        d3d9 : 68 avg math (68..69), 2 avg texture (2..3)
-		//       metal : 56 avg math (56..57), 2 avg texture (2..3)
+		//       d3d11 : 62 avg math (61..64), 2 avg texture (2..3)
+		//        d3d9 : 78 avg math (77..79), 2 avg texture (2..3)
+		//       metal : 62 avg math (61..63), 2 avg texture (2..3)
 		Pass{
 		Name "FORWARD"
 		Tags{ "LIGHTMODE" = "ForwardBase" "SHADOWSUPPORT" = "true" "RenderType" = "Opaque" }
-		GpuProgramID 4947
+		Blend SrcAlpha OneMinusSrcAlpha
+		GpuProgramID 14163
 		Program "vp" {
 		SubProgram "opengl " {
-			// Stats: 56 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				"!!GLSL#version 120
 
@@ -141,12 +144,15 @@ Shader "KSP/Specular Layered" {
 			uniform vec3 _WorldSpaceCameraPos;
 			uniform vec4 _WorldSpaceLightPos0;
 			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
 			uniform float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
 			uniform float _Opacity;
 			uniform float _RimFalloff;
 			uniform vec4 _RimColor;
+			uniform vec4 _TemperatureColor;
+			uniform vec4 _BurnColor;
 			varying vec4 xlv_TEXCOORD0;
 			varying vec4 xlv_TEXCOORD1;
 			varying vec4 xlv_TEXCOORD2;
@@ -162,60 +168,67 @@ Shader "KSP/Specular Layered" {
 				tmpvar_3.y = xlv_TEXCOORD2.w;
 				tmpvar_3.z = xlv_TEXCOORD3.w;
 				vec3 tmpvar_4;
-				tmpvar_4 = normalize((normalize(
-					(_WorldSpaceCameraPos - tmpvar_3)
-					) + _WorldSpaceLightPos0.xyz));
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				tmpvar_4 = normalize((_WorldSpaceCameraPos - tmpvar_3));
+				vec3 tmpvar_5;
 				vec4 tmpvar_6;
-				tmpvar_6 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_5.x;
-				tmpvar_7.y = tmpvar_6.x;
+				tmpvar_6 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_7;
+				tmpvar_7 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
 				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_5.y;
-				tmpvar_8.y = tmpvar_6.y;
+				tmpvar_8.x = tmpvar_6.x;
+				tmpvar_8.y = tmpvar_7.x;
 				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_5.z;
-				tmpvar_9.y = tmpvar_6.z;
+				tmpvar_9.x = tmpvar_6.y;
+				tmpvar_9.y = tmpvar_7.y;
 				vec2 tmpvar_10;
-				tmpvar_10.x = tmpvar_5.w;
-				tmpvar_10.y = tmpvar_6.w;
+				tmpvar_10.x = tmpvar_6.z;
+				tmpvar_10.y = tmpvar_7.z;
 				vec2 tmpvar_11;
-				float tmpvar_12;
-				tmpvar_12 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_11 = mix(mix(tmpvar_7, tmpvar_8, vec2(clamp(tmpvar_12, 0.0, 1.0))), mix(tmpvar_9, tmpvar_10, vec2(clamp(
-					(tmpvar_12 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_12 - 1.0), 0.0, 1.0)));
-				vec3 tmpvar_13;
-				tmpvar_13 = mix(tmpvar_11.xxx, mix(mix(vec3(
-					clamp((tmpvar_11.x + ((1.0 - tmpvar_11.y) * (tmpvar_11.x * tmpvar_11.x))), 0.0, 1.0)
-					), xlv_COLOR0.xyz, tmpvar_11.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0)));
+				tmpvar_11.x = tmpvar_6.w;
+				tmpvar_11.y = tmpvar_7.w;
+				vec2 tmpvar_12;
+				float tmpvar_13;
+				tmpvar_13 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_12 = mix(mix(tmpvar_8, tmpvar_9, vec2(clamp(tmpvar_13, 0.0, 1.0))), mix(tmpvar_10, tmpvar_11, vec2(clamp(
+					(tmpvar_13 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_13 - 1.0), 0.0, 1.0)));
+				tmpvar_5 = (mix(tmpvar_12.xxx, mix(
+					mix(vec3(clamp((tmpvar_12.x + (
+					(1.0 - tmpvar_12.y)
+						*
+						(tmpvar_12.x * tmpvar_12.x)
+						)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_12.yyy)
+					, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz);
 				c_2.w = 0.0;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
+				c_2.xyz = (tmpvar_5 * xlv_TEXCOORD4);
 				vec4 c_14;
 				vec3 tmpvar_15;
 				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = (_LightColor0.xyz * ((tmpvar_13 *
+				float tmpvar_16;
+				tmpvar_16 = (pow(max(0.0,
+					dot(tmpvar_15, normalize((_WorldSpaceLightPos0.xyz + tmpvar_4)))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_12.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_12.y));
+				c_14.xyz = (_LightColor0.xyz * ((tmpvar_5 *
 					max(0.0, dot(tmpvar_15, _WorldSpaceLightPos0.xyz))
-					) + (
-						pow(max(0.0, dot(tmpvar_15, tmpvar_4)), (_Shininess * 128.0))
-						*
-						((pow((
-							(1.0 - tmpvar_11.y)
-							+ 0.4), 3.0) + 0.2) * tmpvar_11.y)
-						)));
-				c_14.w = 1.0;
+					) + (tmpvar_16 * _SpecColor.xyz)));
+				c_14.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * tmpvar_16));
 				c_2 = (c_2 + c_14);
 				c_2.xyz = (c_2.xyz + ((
-					(_RimColor.xyz * pow((1.0 - clamp(
-						normalize((((xlv_TEXCOORD1.xyz * tmpvar_4.x) + (xlv_TEXCOORD2.xyz * tmpvar_4.y)) + (xlv_TEXCOORD3.xyz * tmpvar_4.z)))
-						.z, 0.0, 1.0)), _RimFalloff))
-					* _RimColor.w) * _Opacity));
-				c_2.w = 1.0;
+					((_RimColor.xyz * pow((1.0 -
+						clamp(normalize(((
+						(xlv_TEXCOORD1.xyz * tmpvar_4.x)
+							+
+							(xlv_TEXCOORD2.xyz * tmpvar_4.y)
+							) + (xlv_TEXCOORD3.xyz * tmpvar_4.z))).z, 0.0, 1.0)
+						), _RimFalloff)) * _RimColor.w)
+					+
+					(_TemperatureColor.xyz * _TemperatureColor.w)
+					) * _Opacity));
 				gl_FragData[0] = c_2;
 			}
 
@@ -319,9 +332,9 @@ Shader "KSP/Specular Layered" {
 				Bind "texcoord" TexCoord0
 				Bind "texcoord1" TexCoord1
 				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 208
-				Vector 176[_MainTex_ST]
-				Vector 192[_Emissive_ST]
+				ConstBuffer "$Globals" 240
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
 				ConstBuffer "UnityLighting" 720
 				Vector 608[unity_SHAr]
 				Vector 624[unity_SHAg]
@@ -340,7 +353,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityPerDraw" 2
 				"vs_4_0
 				root12:aaadaaaa
-				eefiecedpmokhcacjpnblfafjemblcbnbomohjohabaaaaaaamakaaaaadaaaaaa
+				eefiecedcdkbidenmpbfphmmfilppognhmcegjcpabaaaaaaamakaaaaadaaaaaa
 				cmaaaaaaceabaaaabaacaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -357,7 +370,7 @@ Shader "KSP/Specular Layered" {
 				apaaaaaaneaaaaaaaeaaaaaaaaaaaaaaadaaaaaaagaaaaaaahaiaaaaneaaaaaa
 				ahaaaaaaaaaaaaaaadaaaaaaahaaaaaaapaaaaaafdfgfpfaepfdejfeejepeoaa
 				feeffiedepepfceeaaedepemepfcaaklfdeieefcpeahaaaaeaaaabaapnabaaaa
-				fjaaaaaeegiocaaaaaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaacnaaaaaa
+				fjaaaaaeegiocaaaaaaaaaaaapaaaaaafjaaaaaeegiocaaaabaaaaaacnaaaaaa
 				fjaaaaaeegiocaaaacaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaad
 				pcbabaaaabaaaaaafpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaa
 				fpaaaaaddcbabaaaaeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaa
@@ -369,9 +382,9 @@ Shader "KSP/Specular Layered" {
 				aaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaacaaaaaa
 				acaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpccabaaaaaaaaaaa
 				egiocaaaacaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaal
-				dccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaaalaaaaaaogikcaaa
-				aaaaaaaaalaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaaaeaaaaaaagiecaaa
-				aaaaaaaaamaaaaaakgiocaaaaaaaaaaaamaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				dccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaaanaaaaaaogikcaaa
+				aaaaaaaaanaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaaaeaaaaaaagiecaaa
+				aaaaaaaaaoaaaaaakgiocaaaaaaaaaaaaoaaaaaadiaaaaaihcaabaaaaaaaaaaa
 				fgbfbaaaaaaaaaaaegiccaaaacaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
 				egiccaaaacaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
 				hcaabaaaaaaaaaaaegiccaaaacaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
@@ -423,7 +436,7 @@ Shader "KSP/Specular Layered" {
 				aaaaaaaaaaaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
-			// Stats: 56 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				"!!GLES
 				#version 100
@@ -554,12 +567,15 @@ Shader "KSP/Specular Layered" {
 			uniform highp vec3 _WorldSpaceCameraPos;
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -585,43 +601,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -631,13 +647,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				c_2.w = 0.0;
 				highp float tmpvar_31;
 				tmpvar_31 = xlv_TEXCOORD1.z;
@@ -648,23 +665,32 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_33;
 				tmpvar_33 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_33;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_34;
-				lowp float spec_35;
-				lowp vec3 tmpvar_36;
-				tmpvar_36 = normalize(worldN_1);
-				lowp float tmpvar_37;
-				tmpvar_37 = max(0.0, dot(tmpvar_36, tmpvar_11));
-				mediump float tmpvar_38;
-				tmpvar_38 = (pow(tmpvar_37, (_Shininess * 128.0)) * tmpvar_15);
-				spec_35 = tmpvar_38;
-				c_34.xyz = (_LightColor0.xyz * ((tmpvar_13 *
-					max(0.0, dot(tmpvar_36, lightDir_5))
-					) + spec_35));
-				c_34.w = 1.0;
-				c_2 = (c_2 + c_34);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_34;
+				lightDir_34 = lightDir_5;
+				mediump vec3 viewDir_35;
+				viewDir_35 = worldViewDir_4;
+				lowp vec4 c_36;
+				lowp float spec_37;
+				lowp float diff_38;
+				lowp vec3 halfDir_39;
+				lowp vec3 tmpvar_40;
+				tmpvar_40 = normalize(worldN_1);
+				mediump vec3 tmpvar_41;
+				tmpvar_41 = normalize((lightDir_34 + viewDir_35));
+				halfDir_39 = tmpvar_41;
+				mediump float tmpvar_42;
+				tmpvar_42 = max(0.0, dot(tmpvar_40, lightDir_34));
+				diff_38 = tmpvar_42;
+				lowp float tmpvar_43;
+				tmpvar_43 = max(0.0, dot(tmpvar_40, halfDir_39));
+				mediump float tmpvar_44;
+				tmpvar_44 = (pow(tmpvar_43, (_Shininess * 128.0)) * tmpvar_14);
+				spec_37 = tmpvar_44;
+				c_36.xyz = (_LightColor0.xyz * ((tmpvar_12 * diff_38) + (spec_37 * _SpecColor.xyz)));
+				c_36.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * spec_37));
+				c_2 = (c_2 + c_36);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -760,6 +786,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in highp vec4 in_POSITION0;
@@ -936,6 +964,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform lowp sampler2D _MainTex;
@@ -951,15 +981,15 @@ Shader "KSP/Specular Layered" {
 			highp vec4 t1;
 			highp vec4 t2;
 			lowp vec4 t10_3;
-			lowp vec4 t10_4;
-			lowp vec3 t10_5;
+			lowp vec3 t10_4;
+			mediump float t16_5;
 			mediump float t16_6;
 			highp vec3 t7;
-			mediump float t16_13;
+			mediump vec3 t16_12;
 			highp vec2 t14;
 			mediump float t16_14;
+			mediump float t16_19;
 			highp float t22;
-			lowp float t10_26;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -989,13 +1019,15 @@ Shader "KSP/Specular Layered" {
 				t16_14 = vs_COLOR0.w;
 				t16_14 = clamp(t16_14, 0.0, 1.0);
 				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
 				t10_4.x = dot(t2.xyz, t2.xyz);
 				t10_4.x = inversesqrt(t10_4.x);
 				t10_4.xyz = t2.xyz * t10_4.xxx;
-				t10_4.w = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = max(t16_5, 0.0);
 				t1.x = t1.y * t1.y;
 				t1.x = t1.y * t1.x + 0.200000003;
 				t0.x = t0.x * t1.x;
@@ -1005,23 +1037,25 @@ Shader "KSP/Specular Layered" {
 				t1.xyz = (-t1.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t22 = dot(t1.xyz, t1.xyz);
 				t22 = inversesqrt(t22);
-				t10_5.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_26 = dot(t10_5.xyz, t10_5.xyz);
-				t10_26 = inversesqrt(t10_26);
-				t10_5.xyz = vec3(t10_26) * t10_5.xyz;
-				t10_4.x = dot(t10_4.xyz, t10_5.xyz);
-				t10_4.xw = max(t10_4.xw, vec2(0.0, 0.0));
-				t16_6 = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6 = t16_6 * t16_13;
-				t16_6 = exp2(t16_6);
-				t16_6 = t0.x * t16_6;
-				t10_4.xyz = t7.xyz * t10_4.www + vec3(t16_6);
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t1.xyz = vec3(t22) * t1.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * vec3(t16_5) + t10_4.xyz;
 				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
 				t10_4.xyz = t7.xyz * vs_TEXCOORD4.xyz + t10_4.xyz;
-				t0.xyz = t10_5.yyy * vs_TEXCOORD2.xyz;
-				t0.xyz = vs_TEXCOORD1.xyz * t10_5.xxx + t0.xyz;
-				t0.xyz = vs_TEXCOORD3.xyz * t10_5.zzz + t0.xyz;
+				t0.xyz = t1.yyy * vs_TEXCOORD2.xyz;
+				t0.xyz = vs_TEXCOORD1.xyz * t1.xxx + t0.xyz;
+				t0.xyz = vs_TEXCOORD3.xyz * t1.zzz + t0.xyz;
 				t0.x = dot(t0.xyz, t0.xyz);
 				t0.x = inversesqrt(t0.x);
 				t0.x = t0.x * t0.z;
@@ -1031,9 +1065,12 @@ Shader "KSP/Specular Layered" {
 				t0.x = t0.x * _RimFalloff;
 				t0.x = exp2(t0.x);
 				t0.xyz = t0.xxx * _RimColor.xyz;
-				t0.xyz = t0.xyz * _RimColor.www;
+				t1.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t0.xyz = t0.xyz * _RimColor.www + t1.xyz;
 				SV_Target0.xyz = t0.xyz * vec3(_Opacity) + t10_4.xyz;
-				SV_Target0.w = 1.0;
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t16_5 = t10_4.x * t16_12.x + _Opacity;
+				SV_Target0.w = t16_5;
 				return;
 			}
 
@@ -1285,6 +1322,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in  vec4 in_POSITION0;
@@ -1455,6 +1494,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform  sampler2D _MainTex;
@@ -1466,16 +1507,15 @@ Shader "KSP/Specular Layered" {
 			in  vec4 vs_COLOR0;
 			in  vec3 vs_TEXCOORD4;
 			out vec4 SV_Target0;
-			vec3 t0;
+			vec4 t0;
 			vec4 t1;
 			vec4 t2;
-			vec3 t3;
+			vec4 t3;
 			lowp vec4 t10_3;
 			vec3 t4;
 			float t5;
 			vec3 t6;
 			vec2 t8;
-			float t12;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -1505,6 +1545,7 @@ Shader "KSP/Specular Layered" {
 				t8.x = vs_COLOR0.w;
 				t8.x = clamp(t8.x, 0.0, 1.0);
 				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
@@ -1522,35 +1563,42 @@ Shader "KSP/Specular Layered" {
 				t6.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t5 = dot(t6.xyz, t6.xyz);
 				t5 = inversesqrt(t5);
-				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
+				t3.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
 				t6.xyz = vec3(t5) * t6.xyz;
-				t1.x = dot(t1.xzw, t6.xyz);
+				t5 = dot(t3.xyz, t3.xyz);
+				t5 = inversesqrt(t5);
+				t3.xyz = vec3(t5) * t3.xyz;
+				t1.x = dot(t1.xzw, t3.xyz);
 				t1.x = max(t1.x, 0.0);
 				t1.x = log2(t1.x);
 				t5 = _Shininess * 128.0;
 				t1.x = t1.x * t5;
 				t1.x = exp2(t1.x);
 				t0.x = t0.x * t1.x;
-				t1.xyz = t4.xyz * t2.xxx + t0.xxx;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t1.xyz = t4.xyz * t2.xxx + t1.xyz;
+				t3.xyz = t4.xyz * vs_TEXCOORD4.xyz;
 				t1.xyz = t1.xyz * _LightColor0.xyz;
-				t0.xyz = t4.xyz * vs_TEXCOORD4.xyz + t1.xyz;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t1.w = t4.x * t0.x + _Opacity;
+				t3.w = 0.0;
+				t0 = t1 + t3;
 				t1.xyz = t6.yyy * vs_TEXCOORD2.xyz;
 				t1.xyz = vs_TEXCOORD1.xyz * t6.xxx + t1.xyz;
 				t1.xyz = vs_TEXCOORD3.xyz * t6.zzz + t1.xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t12 = inversesqrt(t12);
-				t12 = t12 * t1.z;
-				t12 = clamp(t12, 0.0, 1.0);
-				t12 = (-t12) + 1.0;
-				t12 = log2(t12);
-				t12 = t12 * _RimFalloff;
-				t12 = exp2(t12);
-				t1.xyz = vec3(t12) * _RimColor.xyz;
-				t1.xyz = t1.xyz * _RimColor.www;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t2.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t2.xyz;
 				SV_Target0.xyz = t1.xyz * vec3(vec3(_Opacity, _Opacity, _Opacity)) + t0.xyz;
-				SV_Target0.w = 1.0;
+				SV_Target0.w = t0.w;
 				return;
 			}
 
@@ -1558,7 +1606,7 @@ Shader "KSP/Specular Layered" {
 			"
 		}
 		SubProgram "opengl " {
-			// Stats: 57 math, 3 textures
+			// Stats: 63 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				"!!GLSL#version 120
 
@@ -1680,6 +1728,7 @@ Shader "KSP/Specular Layered" {
 			uniform vec3 _WorldSpaceCameraPos;
 			uniform vec4 _WorldSpaceLightPos0;
 			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
 			uniform sampler2D _ShadowMapTexture;
 			uniform float _Shininess;
 			uniform sampler2D _MainTex;
@@ -1687,6 +1736,8 @@ Shader "KSP/Specular Layered" {
 			uniform float _Opacity;
 			uniform float _RimFalloff;
 			uniform vec4 _RimColor;
+			uniform vec4 _TemperatureColor;
+			uniform vec4 _BurnColor;
 			varying vec4 xlv_TEXCOORD0;
 			varying vec4 xlv_TEXCOORD1;
 			varying vec4 xlv_TEXCOORD2;
@@ -1703,58 +1754,71 @@ Shader "KSP/Specular Layered" {
 				tmpvar_3.y = xlv_TEXCOORD2.w;
 				tmpvar_3.z = xlv_TEXCOORD3.w;
 				vec3 tmpvar_4;
-				tmpvar_4 = normalize((normalize(
-					(_WorldSpaceCameraPos - tmpvar_3)
-					) + _WorldSpaceLightPos0.xyz));
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				tmpvar_4 = normalize((_WorldSpaceCameraPos - tmpvar_3));
+				vec3 tmpvar_5;
 				vec4 tmpvar_6;
-				tmpvar_6 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_5.x;
-				tmpvar_7.y = tmpvar_6.x;
+				tmpvar_6 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_7;
+				tmpvar_7 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
 				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_5.y;
-				tmpvar_8.y = tmpvar_6.y;
+				tmpvar_8.x = tmpvar_6.x;
+				tmpvar_8.y = tmpvar_7.x;
 				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_5.z;
-				tmpvar_9.y = tmpvar_6.z;
+				tmpvar_9.x = tmpvar_6.y;
+				tmpvar_9.y = tmpvar_7.y;
 				vec2 tmpvar_10;
-				tmpvar_10.x = tmpvar_5.w;
-				tmpvar_10.y = tmpvar_6.w;
+				tmpvar_10.x = tmpvar_6.z;
+				tmpvar_10.y = tmpvar_7.z;
 				vec2 tmpvar_11;
-				float tmpvar_12;
-				tmpvar_12 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_11 = mix(mix(tmpvar_7, tmpvar_8, vec2(clamp(tmpvar_12, 0.0, 1.0))), mix(tmpvar_9, tmpvar_10, vec2(clamp(
-					(tmpvar_12 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_12 - 1.0), 0.0, 1.0)));
-				vec3 tmpvar_13;
-				tmpvar_13 = mix(tmpvar_11.xxx, mix(mix(vec3(
-					clamp((tmpvar_11.x + ((1.0 - tmpvar_11.y) * (tmpvar_11.x * tmpvar_11.x))), 0.0, 1.0)
-					), xlv_COLOR0.xyz, tmpvar_11.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0)));
+				tmpvar_11.x = tmpvar_6.w;
+				tmpvar_11.y = tmpvar_7.w;
+				vec2 tmpvar_12;
+				float tmpvar_13;
+				tmpvar_13 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_12 = mix(mix(tmpvar_8, tmpvar_9, vec2(clamp(tmpvar_13, 0.0, 1.0))), mix(tmpvar_10, tmpvar_11, vec2(clamp(
+					(tmpvar_13 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_13 - 1.0), 0.0, 1.0)));
+				tmpvar_5 = (mix(tmpvar_12.xxx, mix(
+					mix(vec3(clamp((tmpvar_12.x + (
+					(1.0 - tmpvar_12.y)
+						*
+						(tmpvar_12.x * tmpvar_12.x)
+						)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_12.yyy)
+					, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz);
+				vec4 tmpvar_14;
+				tmpvar_14 = texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5);
 				c_2.w = 0.0;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				vec4 c_14;
-				vec3 tmpvar_15;
-				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_15, _WorldSpaceLightPos0.xyz)))
+				c_2.xyz = (tmpvar_5 * xlv_TEXCOORD4);
+				vec4 c_15;
+				vec3 tmpvar_16;
+				tmpvar_16 = normalize(worldN_1);
+				float tmpvar_17;
+				tmpvar_17 = (pow(max(0.0,
+					dot(tmpvar_16, normalize((_WorldSpaceLightPos0.xyz + tmpvar_4)))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_12.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_12.y));
+				c_15.xyz = ((_LightColor0.xyz * (
+					(tmpvar_5 * max(0.0, dot(tmpvar_16, _WorldSpaceLightPos0.xyz)))
 					+
-					(pow(max(0.0, dot(tmpvar_15, tmpvar_4)), (_Shininess * 128.0)) * ((pow(
-						((1.0 - tmpvar_11.y) + 0.4)
-						, 3.0) + 0.2) * tmpvar_11.y))
-					)) * texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5).x);
-				c_14.w = 1.0;
-				c_2 = (c_2 + c_14);
+					(tmpvar_17 * _SpecColor.xyz)
+					)) * tmpvar_14.x);
+				c_15.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_17 * tmpvar_14.x)));
+				c_2 = (c_2 + c_15);
 				c_2.xyz = (c_2.xyz + ((
-					(_RimColor.xyz * pow((1.0 - clamp(
-						normalize((((xlv_TEXCOORD1.xyz * tmpvar_4.x) + (xlv_TEXCOORD2.xyz * tmpvar_4.y)) + (xlv_TEXCOORD3.xyz * tmpvar_4.z)))
-						.z, 0.0, 1.0)), _RimFalloff))
-					* _RimColor.w) * _Opacity));
-				c_2.w = 1.0;
+					((_RimColor.xyz * pow((1.0 -
+						clamp(normalize(((
+						(xlv_TEXCOORD1.xyz * tmpvar_4.x)
+							+
+							(xlv_TEXCOORD2.xyz * tmpvar_4.y)
+							) + (xlv_TEXCOORD3.xyz * tmpvar_4.z))).z, 0.0, 1.0)
+						), _RimFalloff)) * _RimColor.w)
+					+
+					(_TemperatureColor.xyz * _TemperatureColor.w)
+					) * _Opacity));
 				gl_FragData[0] = c_2;
 			}
 
@@ -1867,9 +1931,9 @@ Shader "KSP/Specular Layered" {
 				Bind "texcoord" TexCoord0
 				Bind "texcoord1" TexCoord1
 				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 208
-				Vector 176[_MainTex_ST]
-				Vector 192[_Emissive_ST]
+				ConstBuffer "$Globals" 240
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 80[_ProjectionParams]
 				ConstBuffer "UnityLighting" 720
@@ -1891,7 +1955,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityPerDraw" 3
 				"vs_4_0
 				root12:aaaeaaaa
-				eefiecedajjhickfgdlnhemldeoemkhjppagonalabaaaaaammakaaaaadaaaaaa
+				eefiecedijgoknkobaaillbgalknkneekbcfnienabaaaaaammakaaaaadaaaaaa
 				cmaaaaaaceabaaaaciacaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -1909,7 +1973,7 @@ Shader "KSP/Specular Layered" {
 				afaaaaaaaaaaaaaaadaaaaaaahaaaaaaapaaaaaaomaaaaaaahaaaaaaaaaaaaaa
 				adaaaaaaaiaaaaaaapaaaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfcee
 				aaedepemepfcaaklfdeieefcjmaiaaaaeaaaabaachacaaaafjaaaaaeegiocaaa
-				aaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaaagaaaaaafjaaaaaeegiocaaa
+				aaaaaaaaapaaaaaafjaaaaaeegiocaaaabaaaaaaagaaaaaafjaaaaaeegiocaaa
 				acaaaaaacnaaaaaafjaaaaaeegiocaaaadaaaaaabgaaaaaafpaaaaadpcbabaaa
 				aaaaaaaafpaaaaadpcbabaaaabaaaaaafpaaaaadhcbabaaaacaaaaaafpaaaaad
 				dcbabaaaadaaaaaafpaaaaaddcbabaaaaeaaaaaafpaaaaadpcbabaaaahaaaaaa
@@ -1923,8 +1987,8 @@ Shader "KSP/Specular Layered" {
 				egaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaadaaaaaaadaaaaaa
 				pgbpbaaaaaaaaaaaegaobaaaaaaaaaaadgaaaaafpccabaaaaaaaaaaaegaobaaa
 				aaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaa
-				alaaaaaaogikcaaaaaaaaaaaalaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaa
-				aeaaaaaaagiecaaaaaaaaaaaamaaaaaakgiocaaaaaaaaaaaamaaaaaadiaaaaai
+				anaaaaaaogikcaaaaaaaaaaaanaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaa
+				aeaaaaaaagiecaaaaaaaaaaaaoaaaaaakgiocaaaaaaaaaaaaoaaaaaadiaaaaai
 				hcaabaaaabaaaaaafgbfbaaaaaaaaaaaegiccaaaadaaaaaaanaaaaaadcaaaaak
 				hcaabaaaabaaaaaaegiccaaaadaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaa
 				abaaaaaadcaaaaakhcaabaaaabaaaaaaegiccaaaadaaaaaaaoaaaaaakgbkbaaa
@@ -1980,7 +2044,7 @@ Shader "KSP/Specular Layered" {
 				aaaaaaaaaaaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
-			// Stats: 61 math, 3 textures
+			// Stats: 67 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				"!!GLES
 				#version 100
@@ -2119,6 +2183,7 @@ Shader "KSP/Specular Layered" {
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform mediump vec4 _LightShadowData;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform highp sampler2D _ShadowMapTexture;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
@@ -2126,6 +2191,8 @@ Shader "KSP/Specular Layered" {
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -2152,43 +2219,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -2198,13 +2265,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				lowp float tmpvar_31;
 				highp float tmpvar_32;
 				tmpvar_32 = max(float((texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5).x >
@@ -2221,23 +2289,38 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_35;
 				tmpvar_35 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_35;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_36;
-				lowp float spec_37;
-				lowp vec3 tmpvar_38;
-				tmpvar_38 = normalize(worldN_1);
-				lowp float tmpvar_39;
-				tmpvar_39 = max(0.0, dot(tmpvar_38, tmpvar_11));
-				mediump float tmpvar_40;
-				tmpvar_40 = (pow(tmpvar_39, (_Shininess * 128.0)) * tmpvar_15);
-				spec_37 = tmpvar_40;
-				c_36.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_38, lightDir_5)))
-					+ spec_37)) * tmpvar_31);
-				c_36.w = 1.0;
-				c_2 = (c_2 + c_36);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_36;
+				lightDir_36 = lightDir_5;
+				mediump vec3 viewDir_37;
+				viewDir_37 = worldViewDir_4;
+				mediump float atn_38;
+				atn_38 = tmpvar_31;
+				lowp vec4 c_39;
+				lowp float spec_40;
+				lowp float diff_41;
+				lowp vec3 halfDir_42;
+				lowp vec3 tmpvar_43;
+				tmpvar_43 = normalize(worldN_1);
+				mediump vec3 tmpvar_44;
+				tmpvar_44 = normalize((lightDir_36 + viewDir_37));
+				halfDir_42 = tmpvar_44;
+				mediump float tmpvar_45;
+				tmpvar_45 = max(0.0, dot(tmpvar_43, lightDir_36));
+				diff_41 = tmpvar_45;
+				lowp float tmpvar_46;
+				tmpvar_46 = max(0.0, dot(tmpvar_43, halfDir_42));
+				mediump float tmpvar_47;
+				tmpvar_47 = (pow(tmpvar_46, (_Shininess * 128.0)) * tmpvar_14);
+				spec_40 = tmpvar_47;
+				c_39.xyz = ((_LightColor0.xyz * (
+					(tmpvar_12 * diff_41)
+					+
+					(spec_40 * _SpecColor.xyz)
+					)) * atn_38);
+				c_39.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * (spec_40 * atn_38)));
+				c_2 = (c_2 + c_39);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -2332,6 +2415,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in  vec4 in_POSITION0;
@@ -2509,6 +2594,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform  sampler2D _MainTex;
@@ -2522,16 +2609,17 @@ Shader "KSP/Specular Layered" {
 			in  vec3 vs_TEXCOORD4;
 			in  vec4 vs_TEXCOORD5;
 			out vec4 SV_Target0;
-			vec3 t0;
+			vec4 t0;
 			vec4 t1;
+			lowp vec4 t10_1;
 			vec4 t2;
-			vec3 t3;
+			vec4 t3;
 			lowp vec4 t10_3;
-			vec3 t4;
-			float t5;
-			vec3 t6;
-			vec2 t8;
-			float t12;
+			vec4 t4;
+			vec3 t5;
+			float t6;
+			vec3 t7;
+			vec2 t10;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -2544,23 +2632,24 @@ Shader "KSP/Specular Layered" {
 				t1.yw = t10_3.xz;
 				t2 = (-t1.yxwz) + t2;
 				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
+				t10.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t10.xy = clamp(t10.xy, 0.0, 1.0);
+				t1.xy = t10.xx * t2.zw + t1.wz;
 				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
+				t0.xy = t10.yy * t1.xy + t0.xy;
+				t10.x = t0.y * t0.y;
 				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t10.x = t1.x * t10.x + t0.y;
+				t10.x = clamp(t10.x, 0.0, 1.0);
+				t1.xzw = (-t10.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t10.xxx;
 				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
 				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
 				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t10.x = vs_COLOR0.w;
+				t10.x = clamp(t10.x, 0.0, 1.0);
+				t5.xyz = t10.xxx * t1.xzw + t0.yyy;
+				t5.xyz = t5.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
@@ -2569,47 +2658,55 @@ Shader "KSP/Specular Layered" {
 				t1.xzw = t1.xxx * t2.xyz;
 				t2.x = dot(t1.xzw, _WorldSpaceLightPos0.xyz);
 				t2.x = max(t2.x, 0.0);
-				t6.x = t1.y * t1.y;
-				t5 = t1.y * t6.x + 0.200000003;
-				t0.x = t0.x * t5;
+				t7.x = t1.y * t1.y;
+				t6 = t1.y * t7.x + 0.200000003;
+				t0.x = t0.x * t6;
 				t3.x = vs_TEXCOORD1.w;
 				t3.y = vs_TEXCOORD2.w;
 				t3.z = vs_TEXCOORD3.w;
-				t6.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
-				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
-				t6.xyz = vec3(t5) * t6.xyz;
-				t1.x = dot(t1.xzw, t6.xyz);
+				t7.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t6 = dot(t7.xyz, t7.xyz);
+				t6 = inversesqrt(t6);
+				t3.xyz = t7.xyz * vec3(t6) + _WorldSpaceLightPos0.xyz;
+				t7.xyz = vec3(t6) * t7.xyz;
+				t6 = dot(t3.xyz, t3.xyz);
+				t6 = inversesqrt(t6);
+				t3.xyz = vec3(t6) * t3.xyz;
+				t1.x = dot(t1.xzw, t3.xyz);
 				t1.x = max(t1.x, 0.0);
 				t1.x = log2(t1.x);
-				t5 = _Shininess * 128.0;
-				t1.x = t1.x * t5;
+				t6 = _Shininess * 128.0;
+				t1.x = t1.x * t6;
 				t1.x = exp2(t1.x);
 				t0.x = t0.x * t1.x;
-				t1.xyz = t4.xyz * t2.xxx + t0.xxx;
-				t1.xyz = t1.xyz * _LightColor0.xyz;
-				t3.xy = vs_TEXCOORD5.xy / vs_TEXCOORD5.ww;
-				t10_3 = texture(_ShadowMapTexture, t3.xy);
-				t1.xyz = t1.xyz * t10_3.xxx;
-				t0.xyz = t4.xyz * vs_TEXCOORD4.xyz + t1.xyz;
-				t1.xyz = t6.yyy * vs_TEXCOORD2.xyz;
-				t1.xyz = vs_TEXCOORD1.xyz * t6.xxx + t1.xyz;
-				t1.xyz = vs_TEXCOORD3.xyz * t6.zzz + t1.xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t12 = inversesqrt(t12);
-				t12 = t12 * t1.z;
-				t12 = clamp(t12, 0.0, 1.0);
-				t12 = (-t12) + 1.0;
-				t12 = log2(t12);
-				t12 = t12 * _RimFalloff;
-				t12 = exp2(t12);
-				t1.xyz = vec3(t12) * _RimColor.xyz;
-				t1.xyz = t1.xyz * _RimColor.www;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t1.xyz = t5.xyz * t2.xxx + t1.xyz;
+				t3.xyz = t5.xyz * vs_TEXCOORD4.xyz;
+				t5.xyz = t1.xyz * _LightColor0.xyz;
+				t1.xy = vs_TEXCOORD5.xy / vs_TEXCOORD5.ww;
+				t10_1 = texture(_ShadowMapTexture, t1.xy);
+				t4.xyz = t5.xyz * t10_1.xxx;
+				t5.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t5.x;
+				t4.w = t0.x * t10_1.x + _Opacity;
+				t3.w = 0.0;
+				t0 = t3 + t4;
+				t1.xyz = t7.yyy * vs_TEXCOORD2.xyz;
+				t1.xyz = vs_TEXCOORD1.xyz * t7.xxx + t1.xyz;
+				t1.xyz = vs_TEXCOORD3.xyz * t7.zzz + t1.xyz;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t2.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t2.xyz;
 				SV_Target0.xyz = t1.xyz * vec3(vec3(_Opacity, _Opacity, _Opacity)) + t0.xyz;
-				SV_Target0.w = 1.0;
+				SV_Target0.w = t0.w;
 				return;
 			}
 
@@ -2617,7 +2714,7 @@ Shader "KSP/Specular Layered" {
 			"
 		}
 		SubProgram "opengl " {
-			// Stats: 56 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" "VERTEXLIGHT_ON" }
 				"!!GLSL#version 120
 
@@ -2757,12 +2854,15 @@ Shader "KSP/Specular Layered" {
 			uniform vec3 _WorldSpaceCameraPos;
 			uniform vec4 _WorldSpaceLightPos0;
 			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
 			uniform float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
 			uniform float _Opacity;
 			uniform float _RimFalloff;
 			uniform vec4 _RimColor;
+			uniform vec4 _TemperatureColor;
+			uniform vec4 _BurnColor;
 			varying vec4 xlv_TEXCOORD0;
 			varying vec4 xlv_TEXCOORD1;
 			varying vec4 xlv_TEXCOORD2;
@@ -2778,60 +2878,67 @@ Shader "KSP/Specular Layered" {
 				tmpvar_3.y = xlv_TEXCOORD2.w;
 				tmpvar_3.z = xlv_TEXCOORD3.w;
 				vec3 tmpvar_4;
-				tmpvar_4 = normalize((normalize(
-					(_WorldSpaceCameraPos - tmpvar_3)
-					) + _WorldSpaceLightPos0.xyz));
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				tmpvar_4 = normalize((_WorldSpaceCameraPos - tmpvar_3));
+				vec3 tmpvar_5;
 				vec4 tmpvar_6;
-				tmpvar_6 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_5.x;
-				tmpvar_7.y = tmpvar_6.x;
+				tmpvar_6 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_7;
+				tmpvar_7 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
 				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_5.y;
-				tmpvar_8.y = tmpvar_6.y;
+				tmpvar_8.x = tmpvar_6.x;
+				tmpvar_8.y = tmpvar_7.x;
 				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_5.z;
-				tmpvar_9.y = tmpvar_6.z;
+				tmpvar_9.x = tmpvar_6.y;
+				tmpvar_9.y = tmpvar_7.y;
 				vec2 tmpvar_10;
-				tmpvar_10.x = tmpvar_5.w;
-				tmpvar_10.y = tmpvar_6.w;
+				tmpvar_10.x = tmpvar_6.z;
+				tmpvar_10.y = tmpvar_7.z;
 				vec2 tmpvar_11;
-				float tmpvar_12;
-				tmpvar_12 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_11 = mix(mix(tmpvar_7, tmpvar_8, vec2(clamp(tmpvar_12, 0.0, 1.0))), mix(tmpvar_9, tmpvar_10, vec2(clamp(
-					(tmpvar_12 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_12 - 1.0), 0.0, 1.0)));
-				vec3 tmpvar_13;
-				tmpvar_13 = mix(tmpvar_11.xxx, mix(mix(vec3(
-					clamp((tmpvar_11.x + ((1.0 - tmpvar_11.y) * (tmpvar_11.x * tmpvar_11.x))), 0.0, 1.0)
-					), xlv_COLOR0.xyz, tmpvar_11.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0)));
+				tmpvar_11.x = tmpvar_6.w;
+				tmpvar_11.y = tmpvar_7.w;
+				vec2 tmpvar_12;
+				float tmpvar_13;
+				tmpvar_13 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_12 = mix(mix(tmpvar_8, tmpvar_9, vec2(clamp(tmpvar_13, 0.0, 1.0))), mix(tmpvar_10, tmpvar_11, vec2(clamp(
+					(tmpvar_13 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_13 - 1.0), 0.0, 1.0)));
+				tmpvar_5 = (mix(tmpvar_12.xxx, mix(
+					mix(vec3(clamp((tmpvar_12.x + (
+					(1.0 - tmpvar_12.y)
+						*
+						(tmpvar_12.x * tmpvar_12.x)
+						)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_12.yyy)
+					, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz);
 				c_2.w = 0.0;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
+				c_2.xyz = (tmpvar_5 * xlv_TEXCOORD4);
 				vec4 c_14;
 				vec3 tmpvar_15;
 				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = (_LightColor0.xyz * ((tmpvar_13 *
+				float tmpvar_16;
+				tmpvar_16 = (pow(max(0.0,
+					dot(tmpvar_15, normalize((_WorldSpaceLightPos0.xyz + tmpvar_4)))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_12.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_12.y));
+				c_14.xyz = (_LightColor0.xyz * ((tmpvar_5 *
 					max(0.0, dot(tmpvar_15, _WorldSpaceLightPos0.xyz))
-					) + (
-						pow(max(0.0, dot(tmpvar_15, tmpvar_4)), (_Shininess * 128.0))
-						*
-						((pow((
-							(1.0 - tmpvar_11.y)
-							+ 0.4), 3.0) + 0.2) * tmpvar_11.y)
-						)));
-				c_14.w = 1.0;
+					) + (tmpvar_16 * _SpecColor.xyz)));
+				c_14.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * tmpvar_16));
 				c_2 = (c_2 + c_14);
 				c_2.xyz = (c_2.xyz + ((
-					(_RimColor.xyz * pow((1.0 - clamp(
-						normalize((((xlv_TEXCOORD1.xyz * tmpvar_4.x) + (xlv_TEXCOORD2.xyz * tmpvar_4.y)) + (xlv_TEXCOORD3.xyz * tmpvar_4.z)))
-						.z, 0.0, 1.0)), _RimFalloff))
-					* _RimColor.w) * _Opacity));
-				c_2.w = 1.0;
+					((_RimColor.xyz * pow((1.0 -
+						clamp(normalize(((
+						(xlv_TEXCOORD1.xyz * tmpvar_4.x)
+							+
+							(xlv_TEXCOORD2.xyz * tmpvar_4.y)
+							) + (xlv_TEXCOORD3.xyz * tmpvar_4.z))).z, 0.0, 1.0)
+						), _RimFalloff)) * _RimColor.w)
+					+
+					(_TemperatureColor.xyz * _TemperatureColor.w)
+					) * _Opacity));
 				gl_FragData[0] = c_2;
 			}
 
@@ -2973,9 +3080,9 @@ Shader "KSP/Specular Layered" {
 				Bind "texcoord" TexCoord0
 				Bind "texcoord1" TexCoord1
 				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 208
-				Vector 176[_MainTex_ST]
-				Vector 192[_Emissive_ST]
+				ConstBuffer "$Globals" 240
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
 				ConstBuffer "UnityLighting" 720
 				Vector 32[unity_4LightPosX0]
 				Vector 48[unity_4LightPosY0]
@@ -3006,7 +3113,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityPerDraw" 2
 				"vs_4_0
 				root12:aaadaaaa
-				eefiecedjmjgdijcnjdjgehdilphleaghlagkcjcabaaaaaameamaaaaadaaaaaa
+				eefiecedllofkbgdpfmebcfmlmpbmcfilojboblkabaaaaaameamaaaaadaaaaaa
 				cmaaaaaaceabaaaabaacaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -3023,7 +3130,7 @@ Shader "KSP/Specular Layered" {
 				apaaaaaaneaaaaaaaeaaaaaaaaaaaaaaadaaaaaaagaaaaaaahaiaaaaneaaaaaa
 				ahaaaaaaaaaaaaaaadaaaaaaahaaaaaaapaaaaaafdfgfpfaepfdejfeejepeoaa
 				feeffiedepepfceeaaedepemepfcaaklfdeieefckmakaaaaeaaaabaaklacaaaa
-				fjaaaaaeegiocaaaaaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaacnaaaaaa
+				fjaaaaaeegiocaaaaaaaaaaaapaaaaaafjaaaaaeegiocaaaabaaaaaacnaaaaaa
 				fjaaaaaeegiocaaaacaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaad
 				pcbabaaaabaaaaaafpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaa
 				fpaaaaaddcbabaaaaeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaa
@@ -3035,9 +3142,9 @@ Shader "KSP/Specular Layered" {
 				aaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaacaaaaaa
 				acaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpccabaaaaaaaaaaa
 				egiocaaaacaaaaaaadaaaaaapgbpbaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaal
-				dccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaaalaaaaaaogikcaaa
-				aaaaaaaaalaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaaaeaaaaaaagiecaaa
-				aaaaaaaaamaaaaaakgiocaaaaaaaaaaaamaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				dccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaaanaaaaaaogikcaaa
+				aaaaaaaaanaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaaaeaaaaaaagiecaaa
+				aaaaaaaaaoaaaaaakgiocaaaaaaaaaaaaoaaaaaadiaaaaaihcaabaaaaaaaaaaa
 				fgbfbaaaabaaaaaajgiecaaaacaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
 				jgiecaaaacaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaaaaaaaaadcaaaaak
 				hcaabaaaaaaaaaaajgiecaaaacaaaaaaaoaaaaaakgbkbaaaabaaaaaaegacbaaa
@@ -3111,7 +3218,7 @@ Shader "KSP/Specular Layered" {
 				doaaaaab"
 		}
 		SubProgram "gles " {
-			// Stats: 56 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" "VERTEXLIGHT_ON" }
 				"!!GLES
 				#version 100
@@ -3286,12 +3393,15 @@ Shader "KSP/Specular Layered" {
 			uniform highp vec3 _WorldSpaceCameraPos;
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -3317,43 +3427,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -3363,13 +3473,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				c_2.w = 0.0;
 				highp float tmpvar_31;
 				tmpvar_31 = xlv_TEXCOORD1.z;
@@ -3380,23 +3491,32 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_33;
 				tmpvar_33 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_33;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_34;
-				lowp float spec_35;
-				lowp vec3 tmpvar_36;
-				tmpvar_36 = normalize(worldN_1);
-				lowp float tmpvar_37;
-				tmpvar_37 = max(0.0, dot(tmpvar_36, tmpvar_11));
-				mediump float tmpvar_38;
-				tmpvar_38 = (pow(tmpvar_37, (_Shininess * 128.0)) * tmpvar_15);
-				spec_35 = tmpvar_38;
-				c_34.xyz = (_LightColor0.xyz * ((tmpvar_13 *
-					max(0.0, dot(tmpvar_36, lightDir_5))
-					) + spec_35));
-				c_34.w = 1.0;
-				c_2 = (c_2 + c_34);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_34;
+				lightDir_34 = lightDir_5;
+				mediump vec3 viewDir_35;
+				viewDir_35 = worldViewDir_4;
+				lowp vec4 c_36;
+				lowp float spec_37;
+				lowp float diff_38;
+				lowp vec3 halfDir_39;
+				lowp vec3 tmpvar_40;
+				tmpvar_40 = normalize(worldN_1);
+				mediump vec3 tmpvar_41;
+				tmpvar_41 = normalize((lightDir_34 + viewDir_35));
+				halfDir_39 = tmpvar_41;
+				mediump float tmpvar_42;
+				tmpvar_42 = max(0.0, dot(tmpvar_40, lightDir_34));
+				diff_38 = tmpvar_42;
+				lowp float tmpvar_43;
+				tmpvar_43 = max(0.0, dot(tmpvar_40, halfDir_39));
+				mediump float tmpvar_44;
+				tmpvar_44 = (pow(tmpvar_43, (_Shininess * 128.0)) * tmpvar_14);
+				spec_37 = tmpvar_44;
+				c_36.xyz = (_LightColor0.xyz * ((tmpvar_12 * diff_38) + (spec_37 * _SpecColor.xyz)));
+				c_36.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * spec_37));
+				c_2 = (c_2 + c_36);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -3492,6 +3612,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in highp vec4 in_POSITION0;
@@ -3690,6 +3812,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform lowp sampler2D _MainTex;
@@ -3705,15 +3829,15 @@ Shader "KSP/Specular Layered" {
 			highp vec4 t1;
 			highp vec4 t2;
 			lowp vec4 t10_3;
-			lowp vec4 t10_4;
-			lowp vec3 t10_5;
+			lowp vec3 t10_4;
+			mediump float t16_5;
 			mediump float t16_6;
 			highp vec3 t7;
-			mediump float t16_13;
+			mediump vec3 t16_12;
 			highp vec2 t14;
 			mediump float t16_14;
+			mediump float t16_19;
 			highp float t22;
-			lowp float t10_26;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -3743,13 +3867,15 @@ Shader "KSP/Specular Layered" {
 				t16_14 = vs_COLOR0.w;
 				t16_14 = clamp(t16_14, 0.0, 1.0);
 				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
 				t10_4.x = dot(t2.xyz, t2.xyz);
 				t10_4.x = inversesqrt(t10_4.x);
 				t10_4.xyz = t2.xyz * t10_4.xxx;
-				t10_4.w = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = max(t16_5, 0.0);
 				t1.x = t1.y * t1.y;
 				t1.x = t1.y * t1.x + 0.200000003;
 				t0.x = t0.x * t1.x;
@@ -3759,23 +3885,25 @@ Shader "KSP/Specular Layered" {
 				t1.xyz = (-t1.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t22 = dot(t1.xyz, t1.xyz);
 				t22 = inversesqrt(t22);
-				t10_5.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_26 = dot(t10_5.xyz, t10_5.xyz);
-				t10_26 = inversesqrt(t10_26);
-				t10_5.xyz = vec3(t10_26) * t10_5.xyz;
-				t10_4.x = dot(t10_4.xyz, t10_5.xyz);
-				t10_4.xw = max(t10_4.xw, vec2(0.0, 0.0));
-				t16_6 = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6 = t16_6 * t16_13;
-				t16_6 = exp2(t16_6);
-				t16_6 = t0.x * t16_6;
-				t10_4.xyz = t7.xyz * t10_4.www + vec3(t16_6);
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t1.xyz = vec3(t22) * t1.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * vec3(t16_5) + t10_4.xyz;
 				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
 				t10_4.xyz = t7.xyz * vs_TEXCOORD4.xyz + t10_4.xyz;
-				t0.xyz = t10_5.yyy * vs_TEXCOORD2.xyz;
-				t0.xyz = vs_TEXCOORD1.xyz * t10_5.xxx + t0.xyz;
-				t0.xyz = vs_TEXCOORD3.xyz * t10_5.zzz + t0.xyz;
+				t0.xyz = t1.yyy * vs_TEXCOORD2.xyz;
+				t0.xyz = vs_TEXCOORD1.xyz * t1.xxx + t0.xyz;
+				t0.xyz = vs_TEXCOORD3.xyz * t1.zzz + t0.xyz;
 				t0.x = dot(t0.xyz, t0.xyz);
 				t0.x = inversesqrt(t0.x);
 				t0.x = t0.x * t0.z;
@@ -3785,9 +3913,12 @@ Shader "KSP/Specular Layered" {
 				t0.x = t0.x * _RimFalloff;
 				t0.x = exp2(t0.x);
 				t0.xyz = t0.xxx * _RimColor.xyz;
-				t0.xyz = t0.xyz * _RimColor.www;
+				t1.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t0.xyz = t0.xyz * _RimColor.www + t1.xyz;
 				SV_Target0.xyz = t0.xyz * vec3(_Opacity) + t10_4.xyz;
-				SV_Target0.w = 1.0;
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t16_5 = t10_4.x * t16_12.x + _Opacity;
+				SV_Target0.w = t16_5;
 				return;
 			}
 
@@ -4095,6 +4226,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in  vec4 in_POSITION0;
@@ -4288,6 +4421,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform  sampler2D _MainTex;
@@ -4299,16 +4434,15 @@ Shader "KSP/Specular Layered" {
 			in  vec4 vs_COLOR0;
 			in  vec3 vs_TEXCOORD4;
 			out vec4 SV_Target0;
-			vec3 t0;
+			vec4 t0;
 			vec4 t1;
 			vec4 t2;
-			vec3 t3;
+			vec4 t3;
 			lowp vec4 t10_3;
 			vec3 t4;
 			float t5;
 			vec3 t6;
 			vec2 t8;
-			float t12;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -4338,6 +4472,7 @@ Shader "KSP/Specular Layered" {
 				t8.x = vs_COLOR0.w;
 				t8.x = clamp(t8.x, 0.0, 1.0);
 				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
@@ -4355,35 +4490,42 @@ Shader "KSP/Specular Layered" {
 				t6.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t5 = dot(t6.xyz, t6.xyz);
 				t5 = inversesqrt(t5);
-				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
+				t3.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
 				t6.xyz = vec3(t5) * t6.xyz;
-				t1.x = dot(t1.xzw, t6.xyz);
+				t5 = dot(t3.xyz, t3.xyz);
+				t5 = inversesqrt(t5);
+				t3.xyz = vec3(t5) * t3.xyz;
+				t1.x = dot(t1.xzw, t3.xyz);
 				t1.x = max(t1.x, 0.0);
 				t1.x = log2(t1.x);
 				t5 = _Shininess * 128.0;
 				t1.x = t1.x * t5;
 				t1.x = exp2(t1.x);
 				t0.x = t0.x * t1.x;
-				t1.xyz = t4.xyz * t2.xxx + t0.xxx;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t1.xyz = t4.xyz * t2.xxx + t1.xyz;
+				t3.xyz = t4.xyz * vs_TEXCOORD4.xyz;
 				t1.xyz = t1.xyz * _LightColor0.xyz;
-				t0.xyz = t4.xyz * vs_TEXCOORD4.xyz + t1.xyz;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t1.w = t4.x * t0.x + _Opacity;
+				t3.w = 0.0;
+				t0 = t1 + t3;
 				t1.xyz = t6.yyy * vs_TEXCOORD2.xyz;
 				t1.xyz = vs_TEXCOORD1.xyz * t6.xxx + t1.xyz;
 				t1.xyz = vs_TEXCOORD3.xyz * t6.zzz + t1.xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t12 = inversesqrt(t12);
-				t12 = t12 * t1.z;
-				t12 = clamp(t12, 0.0, 1.0);
-				t12 = (-t12) + 1.0;
-				t12 = log2(t12);
-				t12 = t12 * _RimFalloff;
-				t12 = exp2(t12);
-				t1.xyz = vec3(t12) * _RimColor.xyz;
-				t1.xyz = t1.xyz * _RimColor.www;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t2.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t2.xyz;
 				SV_Target0.xyz = t1.xyz * vec3(vec3(_Opacity, _Opacity, _Opacity)) + t0.xyz;
-				SV_Target0.w = 1.0;
+				SV_Target0.w = t0.w;
 				return;
 			}
 
@@ -4391,7 +4533,7 @@ Shader "KSP/Specular Layered" {
 			"
 		}
 		SubProgram "opengl " {
-			// Stats: 57 math, 3 textures
+			// Stats: 63 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" "VERTEXLIGHT_ON" }
 				"!!GLSL#version 120
 
@@ -4544,6 +4686,7 @@ Shader "KSP/Specular Layered" {
 			uniform vec3 _WorldSpaceCameraPos;
 			uniform vec4 _WorldSpaceLightPos0;
 			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
 			uniform sampler2D _ShadowMapTexture;
 			uniform float _Shininess;
 			uniform sampler2D _MainTex;
@@ -4551,6 +4694,8 @@ Shader "KSP/Specular Layered" {
 			uniform float _Opacity;
 			uniform float _RimFalloff;
 			uniform vec4 _RimColor;
+			uniform vec4 _TemperatureColor;
+			uniform vec4 _BurnColor;
 			varying vec4 xlv_TEXCOORD0;
 			varying vec4 xlv_TEXCOORD1;
 			varying vec4 xlv_TEXCOORD2;
@@ -4567,58 +4712,71 @@ Shader "KSP/Specular Layered" {
 				tmpvar_3.y = xlv_TEXCOORD2.w;
 				tmpvar_3.z = xlv_TEXCOORD3.w;
 				vec3 tmpvar_4;
-				tmpvar_4 = normalize((normalize(
-					(_WorldSpaceCameraPos - tmpvar_3)
-					) + _WorldSpaceLightPos0.xyz));
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				tmpvar_4 = normalize((_WorldSpaceCameraPos - tmpvar_3));
+				vec3 tmpvar_5;
 				vec4 tmpvar_6;
-				tmpvar_6 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_5.x;
-				tmpvar_7.y = tmpvar_6.x;
+				tmpvar_6 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_7;
+				tmpvar_7 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
 				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_5.y;
-				tmpvar_8.y = tmpvar_6.y;
+				tmpvar_8.x = tmpvar_6.x;
+				tmpvar_8.y = tmpvar_7.x;
 				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_5.z;
-				tmpvar_9.y = tmpvar_6.z;
+				tmpvar_9.x = tmpvar_6.y;
+				tmpvar_9.y = tmpvar_7.y;
 				vec2 tmpvar_10;
-				tmpvar_10.x = tmpvar_5.w;
-				tmpvar_10.y = tmpvar_6.w;
+				tmpvar_10.x = tmpvar_6.z;
+				tmpvar_10.y = tmpvar_7.z;
 				vec2 tmpvar_11;
-				float tmpvar_12;
-				tmpvar_12 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_11 = mix(mix(tmpvar_7, tmpvar_8, vec2(clamp(tmpvar_12, 0.0, 1.0))), mix(tmpvar_9, tmpvar_10, vec2(clamp(
-					(tmpvar_12 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_12 - 1.0), 0.0, 1.0)));
-				vec3 tmpvar_13;
-				tmpvar_13 = mix(tmpvar_11.xxx, mix(mix(vec3(
-					clamp((tmpvar_11.x + ((1.0 - tmpvar_11.y) * (tmpvar_11.x * tmpvar_11.x))), 0.0, 1.0)
-					), xlv_COLOR0.xyz, tmpvar_11.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0)));
+				tmpvar_11.x = tmpvar_6.w;
+				tmpvar_11.y = tmpvar_7.w;
+				vec2 tmpvar_12;
+				float tmpvar_13;
+				tmpvar_13 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_12 = mix(mix(tmpvar_8, tmpvar_9, vec2(clamp(tmpvar_13, 0.0, 1.0))), mix(tmpvar_10, tmpvar_11, vec2(clamp(
+					(tmpvar_13 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_13 - 1.0), 0.0, 1.0)));
+				tmpvar_5 = (mix(tmpvar_12.xxx, mix(
+					mix(vec3(clamp((tmpvar_12.x + (
+					(1.0 - tmpvar_12.y)
+						*
+						(tmpvar_12.x * tmpvar_12.x)
+						)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_12.yyy)
+					, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz);
+				vec4 tmpvar_14;
+				tmpvar_14 = texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5);
 				c_2.w = 0.0;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				vec4 c_14;
-				vec3 tmpvar_15;
-				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_15, _WorldSpaceLightPos0.xyz)))
+				c_2.xyz = (tmpvar_5 * xlv_TEXCOORD4);
+				vec4 c_15;
+				vec3 tmpvar_16;
+				tmpvar_16 = normalize(worldN_1);
+				float tmpvar_17;
+				tmpvar_17 = (pow(max(0.0,
+					dot(tmpvar_16, normalize((_WorldSpaceLightPos0.xyz + tmpvar_4)))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_12.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_12.y));
+				c_15.xyz = ((_LightColor0.xyz * (
+					(tmpvar_5 * max(0.0, dot(tmpvar_16, _WorldSpaceLightPos0.xyz)))
 					+
-					(pow(max(0.0, dot(tmpvar_15, tmpvar_4)), (_Shininess * 128.0)) * ((pow(
-						((1.0 - tmpvar_11.y) + 0.4)
-						, 3.0) + 0.2) * tmpvar_11.y))
-					)) * texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5).x);
-				c_14.w = 1.0;
-				c_2 = (c_2 + c_14);
+					(tmpvar_17 * _SpecColor.xyz)
+					)) * tmpvar_14.x);
+				c_15.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_17 * tmpvar_14.x)));
+				c_2 = (c_2 + c_15);
 				c_2.xyz = (c_2.xyz + ((
-					(_RimColor.xyz * pow((1.0 - clamp(
-						normalize((((xlv_TEXCOORD1.xyz * tmpvar_4.x) + (xlv_TEXCOORD2.xyz * tmpvar_4.y)) + (xlv_TEXCOORD3.xyz * tmpvar_4.z)))
-						.z, 0.0, 1.0)), _RimFalloff))
-					* _RimColor.w) * _Opacity));
-				c_2.w = 1.0;
+					((_RimColor.xyz * pow((1.0 -
+						clamp(normalize(((
+						(xlv_TEXCOORD1.xyz * tmpvar_4.x)
+							+
+							(xlv_TEXCOORD2.xyz * tmpvar_4.y)
+							) + (xlv_TEXCOORD3.xyz * tmpvar_4.z))).z, 0.0, 1.0)
+						), _RimFalloff)) * _RimColor.w)
+					+
+					(_TemperatureColor.xyz * _TemperatureColor.w)
+					) * _Opacity));
 				gl_FragData[0] = c_2;
 			}
 
@@ -4769,9 +4927,9 @@ Shader "KSP/Specular Layered" {
 				Bind "texcoord" TexCoord0
 				Bind "texcoord1" TexCoord1
 				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 208
-				Vector 176[_MainTex_ST]
-				Vector 192[_Emissive_ST]
+				ConstBuffer "$Globals" 240
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 80[_ProjectionParams]
 				ConstBuffer "UnityLighting" 720
@@ -4805,7 +4963,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityPerDraw" 3
 				"vs_4_0
 				root12:aaaeaaaa
-				eefiecedjgdlggnjkecejefgijfcoijgfnmokcikabaaaaaaieanaaaaadaaaaaa
+				eefiecedhemebglcpplbnglgbcfgoncbibcbekpcabaaaaaaieanaaaaadaaaaaa
 				cmaaaaaaceabaaaaciacaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -4823,7 +4981,7 @@ Shader "KSP/Specular Layered" {
 				afaaaaaaaaaaaaaaadaaaaaaahaaaaaaapaaaaaaomaaaaaaahaaaaaaaaaaaaaa
 				adaaaaaaaiaaaaaaapaaaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfcee
 				aaedepemepfcaaklfdeieefcfealaaaaeaaaabaanfacaaaafjaaaaaeegiocaaa
-				aaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaaagaaaaaafjaaaaaeegiocaaa
+				aaaaaaaaapaaaaaafjaaaaaeegiocaaaabaaaaaaagaaaaaafjaaaaaeegiocaaa
 				acaaaaaacnaaaaaafjaaaaaeegiocaaaadaaaaaabgaaaaaafpaaaaadpcbabaaa
 				aaaaaaaafpaaaaadpcbabaaaabaaaaaafpaaaaadhcbabaaaacaaaaaafpaaaaad
 				dcbabaaaadaaaaaafpaaaaaddcbabaaaaeaaaaaafpaaaaadpcbabaaaahaaaaaa
@@ -4837,8 +4995,8 @@ Shader "KSP/Specular Layered" {
 				egaobaaaaaaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaaadaaaaaaadaaaaaa
 				pgbpbaaaaaaaaaaaegaobaaaaaaaaaaadgaaaaafpccabaaaaaaaaaaaegaobaaa
 				aaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaaaaaaaaaa
-				alaaaaaaogikcaaaaaaaaaaaalaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaa
-				aeaaaaaaagiecaaaaaaaaaaaamaaaaaakgiocaaaaaaaaaaaamaaaaaadiaaaaai
+				anaaaaaaogikcaaaaaaaaaaaanaaaaaadcaaaaalmccabaaaabaaaaaaagbebaaa
+				aeaaaaaaagiecaaaaaaaaaaaaoaaaaaakgiocaaaaaaaaaaaaoaaaaaadiaaaaai
 				hcaabaaaabaaaaaafgbfbaaaabaaaaaajgiecaaaadaaaaaaanaaaaaadcaaaaak
 				hcaabaaaabaaaaaajgiecaaaadaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaa
 				abaaaaaadcaaaaakhcaabaaaabaaaaaajgiecaaaadaaaaaaaoaaaaaakgbkbaaa
@@ -4916,7 +5074,7 @@ Shader "KSP/Specular Layered" {
 				doaaaaab"
 		}
 		SubProgram "gles " {
-			// Stats: 61 math, 3 textures
+			// Stats: 67 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" "VERTEXLIGHT_ON" }
 				"!!GLES
 				#version 100
@@ -5099,6 +5257,7 @@ Shader "KSP/Specular Layered" {
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform mediump vec4 _LightShadowData;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform highp sampler2D _ShadowMapTexture;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
@@ -5106,6 +5265,8 @@ Shader "KSP/Specular Layered" {
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -5132,43 +5293,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -5178,13 +5339,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				lowp float tmpvar_31;
 				highp float tmpvar_32;
 				tmpvar_32 = max(float((texture2DProj(_ShadowMapTexture, xlv_TEXCOORD5).x >
@@ -5201,23 +5363,38 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_35;
 				tmpvar_35 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_35;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_36;
-				lowp float spec_37;
-				lowp vec3 tmpvar_38;
-				tmpvar_38 = normalize(worldN_1);
-				lowp float tmpvar_39;
-				tmpvar_39 = max(0.0, dot(tmpvar_38, tmpvar_11));
-				mediump float tmpvar_40;
-				tmpvar_40 = (pow(tmpvar_39, (_Shininess * 128.0)) * tmpvar_15);
-				spec_37 = tmpvar_40;
-				c_36.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_38, lightDir_5)))
-					+ spec_37)) * tmpvar_31);
-				c_36.w = 1.0;
-				c_2 = (c_2 + c_36);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_36;
+				lightDir_36 = lightDir_5;
+				mediump vec3 viewDir_37;
+				viewDir_37 = worldViewDir_4;
+				mediump float atn_38;
+				atn_38 = tmpvar_31;
+				lowp vec4 c_39;
+				lowp float spec_40;
+				lowp float diff_41;
+				lowp vec3 halfDir_42;
+				lowp vec3 tmpvar_43;
+				tmpvar_43 = normalize(worldN_1);
+				mediump vec3 tmpvar_44;
+				tmpvar_44 = normalize((lightDir_36 + viewDir_37));
+				halfDir_42 = tmpvar_44;
+				mediump float tmpvar_45;
+				tmpvar_45 = max(0.0, dot(tmpvar_43, lightDir_36));
+				diff_41 = tmpvar_45;
+				lowp float tmpvar_46;
+				tmpvar_46 = max(0.0, dot(tmpvar_43, halfDir_42));
+				mediump float tmpvar_47;
+				tmpvar_47 = (pow(tmpvar_46, (_Shininess * 128.0)) * tmpvar_14);
+				spec_40 = tmpvar_47;
+				c_39.xyz = ((_LightColor0.xyz * (
+					(tmpvar_12 * diff_41)
+					+
+					(spec_40 * _SpecColor.xyz)
+					)) * atn_38);
+				c_39.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * (spec_40 * atn_38)));
+				c_2 = (c_2 + c_39);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -5312,6 +5489,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in  vec4 in_POSITION0;
@@ -5512,6 +5691,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform  sampler2D _MainTex;
@@ -5525,16 +5706,17 @@ Shader "KSP/Specular Layered" {
 			in  vec3 vs_TEXCOORD4;
 			in  vec4 vs_TEXCOORD5;
 			out vec4 SV_Target0;
-			vec3 t0;
+			vec4 t0;
 			vec4 t1;
+			lowp vec4 t10_1;
 			vec4 t2;
-			vec3 t3;
+			vec4 t3;
 			lowp vec4 t10_3;
-			vec3 t4;
-			float t5;
-			vec3 t6;
-			vec2 t8;
-			float t12;
+			vec4 t4;
+			vec3 t5;
+			float t6;
+			vec3 t7;
+			vec2 t10;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -5547,23 +5729,24 @@ Shader "KSP/Specular Layered" {
 				t1.yw = t10_3.xz;
 				t2 = (-t1.yxwz) + t2;
 				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
+				t10.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t10.xy = clamp(t10.xy, 0.0, 1.0);
+				t1.xy = t10.xx * t2.zw + t1.wz;
 				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
+				t0.xy = t10.yy * t1.xy + t0.xy;
+				t10.x = t0.y * t0.y;
 				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t10.x = t1.x * t10.x + t0.y;
+				t10.x = clamp(t10.x, 0.0, 1.0);
+				t1.xzw = (-t10.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t10.xxx;
 				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
 				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
 				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t10.x = vs_COLOR0.w;
+				t10.x = clamp(t10.x, 0.0, 1.0);
+				t5.xyz = t10.xxx * t1.xzw + t0.yyy;
+				t5.xyz = t5.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
@@ -5572,47 +5755,55 @@ Shader "KSP/Specular Layered" {
 				t1.xzw = t1.xxx * t2.xyz;
 				t2.x = dot(t1.xzw, _WorldSpaceLightPos0.xyz);
 				t2.x = max(t2.x, 0.0);
-				t6.x = t1.y * t1.y;
-				t5 = t1.y * t6.x + 0.200000003;
-				t0.x = t0.x * t5;
+				t7.x = t1.y * t1.y;
+				t6 = t1.y * t7.x + 0.200000003;
+				t0.x = t0.x * t6;
 				t3.x = vs_TEXCOORD1.w;
 				t3.y = vs_TEXCOORD2.w;
 				t3.z = vs_TEXCOORD3.w;
-				t6.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
-				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
-				t5 = dot(t6.xyz, t6.xyz);
-				t5 = inversesqrt(t5);
-				t6.xyz = vec3(t5) * t6.xyz;
-				t1.x = dot(t1.xzw, t6.xyz);
+				t7.xyz = (-t3.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t6 = dot(t7.xyz, t7.xyz);
+				t6 = inversesqrt(t6);
+				t3.xyz = t7.xyz * vec3(t6) + _WorldSpaceLightPos0.xyz;
+				t7.xyz = vec3(t6) * t7.xyz;
+				t6 = dot(t3.xyz, t3.xyz);
+				t6 = inversesqrt(t6);
+				t3.xyz = vec3(t6) * t3.xyz;
+				t1.x = dot(t1.xzw, t3.xyz);
 				t1.x = max(t1.x, 0.0);
 				t1.x = log2(t1.x);
-				t5 = _Shininess * 128.0;
-				t1.x = t1.x * t5;
+				t6 = _Shininess * 128.0;
+				t1.x = t1.x * t6;
 				t1.x = exp2(t1.x);
 				t0.x = t0.x * t1.x;
-				t1.xyz = t4.xyz * t2.xxx + t0.xxx;
-				t1.xyz = t1.xyz * _LightColor0.xyz;
-				t3.xy = vs_TEXCOORD5.xy / vs_TEXCOORD5.ww;
-				t10_3 = texture(_ShadowMapTexture, t3.xy);
-				t1.xyz = t1.xyz * t10_3.xxx;
-				t0.xyz = t4.xyz * vs_TEXCOORD4.xyz + t1.xyz;
-				t1.xyz = t6.yyy * vs_TEXCOORD2.xyz;
-				t1.xyz = vs_TEXCOORD1.xyz * t6.xxx + t1.xyz;
-				t1.xyz = vs_TEXCOORD3.xyz * t6.zzz + t1.xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t12 = inversesqrt(t12);
-				t12 = t12 * t1.z;
-				t12 = clamp(t12, 0.0, 1.0);
-				t12 = (-t12) + 1.0;
-				t12 = log2(t12);
-				t12 = t12 * _RimFalloff;
-				t12 = exp2(t12);
-				t1.xyz = vec3(t12) * _RimColor.xyz;
-				t1.xyz = t1.xyz * _RimColor.www;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t1.xyz = t5.xyz * t2.xxx + t1.xyz;
+				t3.xyz = t5.xyz * vs_TEXCOORD4.xyz;
+				t5.xyz = t1.xyz * _LightColor0.xyz;
+				t1.xy = vs_TEXCOORD5.xy / vs_TEXCOORD5.ww;
+				t10_1 = texture(_ShadowMapTexture, t1.xy);
+				t4.xyz = t5.xyz * t10_1.xxx;
+				t5.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t5.x;
+				t4.w = t0.x * t10_1.x + _Opacity;
+				t3.w = 0.0;
+				t0 = t3 + t4;
+				t1.xyz = t7.yyy * vs_TEXCOORD2.xyz;
+				t1.xyz = vs_TEXCOORD1.xyz * t7.xxx + t1.xyz;
+				t1.xyz = vs_TEXCOORD3.xyz * t7.zzz + t1.xyz;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t2.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t2.xyz;
 				SV_Target0.xyz = t1.xyz * vec3(vec3(_Opacity, _Opacity, _Opacity)) + t0.xyz;
-				SV_Target0.w = 1.0;
+				SV_Target0.w = t0.w;
 				return;
 			}
 
@@ -5620,7 +5811,7 @@ Shader "KSP/Specular Layered" {
 			"
 		}
 		SubProgram "gles " {
-			// Stats: 60 math, 3 textures
+			// Stats: 66 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "SHADOWS_NATIVE" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				"!!GLES
 				#version 100
@@ -5761,6 +5952,7 @@ Shader "KSP/Specular Layered" {
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform mediump vec4 _LightShadowData;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform lowp sampler2DShadow _ShadowMapTexture;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
@@ -5768,6 +5960,8 @@ Shader "KSP/Specular Layered" {
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -5794,43 +5988,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -5840,13 +6034,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				lowp float shadow_31;
 				shadow_31 = (_LightShadowData.x + (shadow2DEXT(_ShadowMapTexture, xlv_TEXCOORD5.xyz) * (1.0 - _LightShadowData.x)));
 				c_2.w = 0.0;
@@ -5859,23 +6054,38 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_34;
 				tmpvar_34 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_34;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_35;
-				lowp float spec_36;
-				lowp vec3 tmpvar_37;
-				tmpvar_37 = normalize(worldN_1);
-				lowp float tmpvar_38;
-				tmpvar_38 = max(0.0, dot(tmpvar_37, tmpvar_11));
-				mediump float tmpvar_39;
-				tmpvar_39 = (pow(tmpvar_38, (_Shininess * 128.0)) * tmpvar_15);
-				spec_36 = tmpvar_39;
-				c_35.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_37, lightDir_5)))
-					+ spec_36)) * shadow_31);
-				c_35.w = 1.0;
-				c_2 = (c_2 + c_35);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_35;
+				lightDir_35 = lightDir_5;
+				mediump vec3 viewDir_36;
+				viewDir_36 = worldViewDir_4;
+				mediump float atn_37;
+				atn_37 = shadow_31;
+				lowp vec4 c_38;
+				lowp float spec_39;
+				lowp float diff_40;
+				lowp vec3 halfDir_41;
+				lowp vec3 tmpvar_42;
+				tmpvar_42 = normalize(worldN_1);
+				mediump vec3 tmpvar_43;
+				tmpvar_43 = normalize((lightDir_35 + viewDir_36));
+				halfDir_41 = tmpvar_43;
+				mediump float tmpvar_44;
+				tmpvar_44 = max(0.0, dot(tmpvar_42, lightDir_35));
+				diff_40 = tmpvar_44;
+				lowp float tmpvar_45;
+				tmpvar_45 = max(0.0, dot(tmpvar_42, halfDir_41));
+				mediump float tmpvar_46;
+				tmpvar_46 = (pow(tmpvar_45, (_Shininess * 128.0)) * tmpvar_14);
+				spec_39 = tmpvar_46;
+				c_38.xyz = ((_LightColor0.xyz * (
+					(tmpvar_12 * diff_40)
+					+
+					(spec_39 * _SpecColor.xyz)
+					)) * atn_37);
+				c_38.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * (spec_39 * atn_37)));
+				c_2 = (c_2 + c_38);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -5971,6 +6181,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in highp vec4 in_POSITION0;
@@ -6157,6 +6369,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform lowp sampler2D _MainTex;
@@ -6171,19 +6385,22 @@ Shader "KSP/Specular Layered" {
 			in lowp vec3 vs_TEXCOORD4;
 			in mediump vec4 vs_TEXCOORD5;
 			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec3 t0;
+			highp vec2 t0;
+			lowp vec4 t10_0;
 			highp vec4 t1;
 			highp vec4 t2;
+			mediump vec4 t16_2;
+			highp vec3 t3;
 			lowp vec4 t10_3;
-			lowp vec4 t10_4;
-			lowp vec3 t10_5;
+			lowp vec3 t10_4;
+			mediump float t16_5;
 			mediump float t16_6;
 			highp vec3 t7;
-			mediump float t16_13;
+			mediump vec3 t16_12;
 			highp vec2 t14;
 			mediump float t16_14;
+			mediump float t16_19;
 			highp float t22;
-			lowp float t10_26;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -6213,13 +6430,15 @@ Shader "KSP/Specular Layered" {
 				t16_14 = vs_COLOR0.w;
 				t16_14 = clamp(t16_14, 0.0, 1.0);
 				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
 				t10_4.x = dot(t2.xyz, t2.xyz);
 				t10_4.x = inversesqrt(t10_4.x);
 				t10_4.xyz = t2.xyz * t10_4.xxx;
-				t10_4.w = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = max(t16_5, 0.0);
 				t1.x = t1.y * t1.y;
 				t1.x = t1.y * t1.x + 0.200000003;
 				t0.x = t0.x * t1.x;
@@ -6229,40 +6448,48 @@ Shader "KSP/Specular Layered" {
 				t1.xyz = (-t1.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t22 = dot(t1.xyz, t1.xyz);
 				t22 = inversesqrt(t22);
-				t10_5.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_26 = dot(t10_5.xyz, t10_5.xyz);
-				t10_26 = inversesqrt(t10_26);
-				t10_5.xyz = vec3(t10_26) * t10_5.xyz;
-				t10_4.x = dot(t10_4.xyz, t10_5.xyz);
-				t10_4.xw = max(t10_4.xw, vec2(0.0, 0.0));
-				t16_6 = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6 = t16_6 * t16_13;
-				t16_6 = exp2(t16_6);
-				t16_6 = t0.x * t16_6;
-				t10_4.xyz = t7.xyz * t10_4.www + vec3(t16_6);
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t1.xyz = vec3(t22) * t1.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * vec3(t16_5) + t10_4.xyz;
+				t10_0.xyz = t7.xyz * vs_TEXCOORD4.xyz;
 				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
 				vec3 txVec0 = vec3(vs_TEXCOORD5.xy,vs_TEXCOORD5.z);
-				t16_6 = textureLod(hlslcc_zcmp_ShadowMapTexture, txVec0, 0.0);
-				t16_13 = (-_LightShadowData.x) + 1.0;
-				t16_6 = t16_6 * t16_13 + _LightShadowData.x;
-				t10_4.xyz = t10_4.xyz * vec3(t16_6);
-				t10_4.xyz = t7.xyz * vs_TEXCOORD4.xyz + t10_4.xyz;
-				t0.xyz = t10_5.yyy * vs_TEXCOORD2.xyz;
-				t0.xyz = vs_TEXCOORD1.xyz * t10_5.xxx + t0.xyz;
-				t0.xyz = vs_TEXCOORD3.xyz * t10_5.zzz + t0.xyz;
-				t0.x = dot(t0.xyz, t0.xyz);
-				t0.x = inversesqrt(t0.x);
-				t0.x = t0.x * t0.z;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t0.x = (-t0.x) + 1.0;
-				t0.x = log2(t0.x);
-				t0.x = t0.x * _RimFalloff;
-				t0.x = exp2(t0.x);
-				t0.xyz = t0.xxx * _RimColor.xyz;
-				t0.xyz = t0.xyz * _RimColor.www;
-				SV_Target0.xyz = t0.xyz * vec3(_Opacity) + t10_4.xyz;
-				SV_Target0.w = 1.0;
+				t16_5 = textureLod(hlslcc_zcmp_ShadowMapTexture, txVec0, 0.0);
+				t16_19 = (-_LightShadowData.x) + 1.0;
+				t16_5 = t16_5 * t16_19 + _LightShadowData.x;
+				t16_2.xyz = t10_4.xyz * vec3(t16_5);
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t10_4.x = t16_12.x * t10_4.x;
+				t16_2.w = t10_4.x * t16_5 + _Opacity;
+				t10_0.w = 0.0;
+				t10_0 = t10_0 + t16_2;
+				t3.xyz = t1.yyy * vs_TEXCOORD2.xyz;
+				t1.xyw = vs_TEXCOORD1.xyz * t1.xxx + t3.xyz;
+				t1.xyz = vs_TEXCOORD3.xyz * t1.zzz + t1.xyw;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t3.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t3.xyz;
+				SV_Target0.xyz = t1.xyz * vec3(_Opacity) + t10_0.xyz;
+				SV_Target0.w = t10_0.w;
 				return;
 			}
 
@@ -6444,7 +6671,7 @@ Shader "KSP/Specular Layered" {
 			"
 		}
 		SubProgram "gles " {
-			// Stats: 60 math, 3 textures
+			// Stats: 66 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "SHADOWS_NATIVE" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" "VERTEXLIGHT_ON" }
 				"!!GLES
 				#version 100
@@ -6629,6 +6856,7 @@ Shader "KSP/Specular Layered" {
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform mediump vec4 _LightShadowData;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform lowp sampler2DShadow _ShadowMapTexture;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
@@ -6636,6 +6864,8 @@ Shader "KSP/Specular Layered" {
 			uniform highp float _Opacity;
 			uniform highp float _RimFalloff;
 			uniform highp vec4 _RimColor;
+			uniform highp vec4 _TemperatureColor;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying highp vec4 xlv_TEXCOORD1;
 			varying highp vec4 xlv_TEXCOORD2;
@@ -6662,43 +6892,43 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_10;
 				tmpvar_10 = normalize((_WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = tmpvar_10;
-				lowp vec3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				highp vec3 tmpvar_12;
-				tmpvar_12 = (((xlv_TEXCOORD1.xyz * tmpvar_11.x) + (xlv_TEXCOORD2.xyz * tmpvar_11.y)) + (xlv_TEXCOORD3.xyz * tmpvar_11.z));
-				viewDir_3 = tmpvar_12;
+				highp vec3 tmpvar_11;
+				tmpvar_11 = (((xlv_TEXCOORD1.xyz * worldViewDir_4.x) + (xlv_TEXCOORD2.xyz * worldViewDir_4.y)) + (xlv_TEXCOORD3.xyz * worldViewDir_4.z));
+				viewDir_3 = tmpvar_11;
 				tmpvar_6 = viewDir_3;
 				tmpvar_7 = xlv_COLOR0;
+				lowp vec3 tmpvar_12;
 				lowp vec3 tmpvar_13;
-				lowp vec3 tmpvar_14;
+				lowp float tmpvar_14;
 				lowp float tmpvar_15;
-				highp vec4 mask_16;
-				highp vec4 color_17;
-				lowp vec4 tmpvar_18;
-				tmpvar_18 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_17 = tmpvar_18;
+				highp vec3 emission_16;
+				highp vec4 mask_17;
+				highp vec4 color_18;
 				lowp vec4 tmpvar_19;
-				tmpvar_19 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_16 = tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				mediump float tmpvar_21;
-				tmpvar_21 = (1.0 - tmpvar_20);
-				highp vec3 tmpvar_22;
-				tmpvar_22 = ((_RimColor.xyz * pow(tmpvar_21, _RimFalloff)) * _RimColor.w);
+				tmpvar_19 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_18 = tmpvar_19;
+				lowp vec4 tmpvar_20;
+				tmpvar_20 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_17 = tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				mediump float tmpvar_22;
+				tmpvar_22 = (1.0 - tmpvar_21);
+				emission_16 = (((_RimColor.xyz *
+					pow(tmpvar_22, _RimFalloff)
+					) * _RimColor.w) + (_TemperatureColor.xyz * _TemperatureColor.w));
 				highp vec2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				highp vec2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				highp vec2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				highp vec2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				highp vec2 tmpvar_27;
 				highp float tmpvar_28;
 				tmpvar_28 = (xlv_TEXCOORD0.z * 3.0);
@@ -6708,13 +6938,14 @@ Shader "KSP/Specular Layered" {
 				highp vec3 tmpvar_29;
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(vec3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = tmpvar_29;
-				tmpvar_14 = tmpvar_22;
+				), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
+				tmpvar_12 = (tmpvar_29 * _BurnColor.xyz);
+				tmpvar_13 = emission_16;
 				highp float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
-				tmpvar_14 = (tmpvar_14 * _Opacity);
+				tmpvar_14 = ((tmpvar_30 + 0.2) * tmpvar_27.y);
+				tmpvar_13 = (tmpvar_13 * _Opacity);
+				tmpvar_15 = _Opacity;
 				lowp float shadow_31;
 				shadow_31 = (_LightShadowData.x + (shadow2DEXT(_ShadowMapTexture, xlv_TEXCOORD5.xyz) * (1.0 - _LightShadowData.x)));
 				c_2.w = 0.0;
@@ -6727,23 +6958,38 @@ Shader "KSP/Specular Layered" {
 				highp float tmpvar_34;
 				tmpvar_34 = xlv_TEXCOORD3.z;
 				worldN_1.z = tmpvar_34;
-				c_2.xyz = (tmpvar_13 * xlv_TEXCOORD4);
-				lowp vec4 c_35;
-				lowp float spec_36;
-				lowp vec3 tmpvar_37;
-				tmpvar_37 = normalize(worldN_1);
-				lowp float tmpvar_38;
-				tmpvar_38 = max(0.0, dot(tmpvar_37, tmpvar_11));
-				mediump float tmpvar_39;
-				tmpvar_39 = (pow(tmpvar_38, (_Shininess * 128.0)) * tmpvar_15);
-				spec_36 = tmpvar_39;
-				c_35.xyz = ((_LightColor0.xyz * (
-					(tmpvar_13 * max(0.0, dot(tmpvar_37, lightDir_5)))
-					+ spec_36)) * shadow_31);
-				c_35.w = 1.0;
-				c_2 = (c_2 + c_35);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = 1.0;
+				c_2.xyz = (tmpvar_12 * xlv_TEXCOORD4);
+				mediump vec3 lightDir_35;
+				lightDir_35 = lightDir_5;
+				mediump vec3 viewDir_36;
+				viewDir_36 = worldViewDir_4;
+				mediump float atn_37;
+				atn_37 = shadow_31;
+				lowp vec4 c_38;
+				lowp float spec_39;
+				lowp float diff_40;
+				lowp vec3 halfDir_41;
+				lowp vec3 tmpvar_42;
+				tmpvar_42 = normalize(worldN_1);
+				mediump vec3 tmpvar_43;
+				tmpvar_43 = normalize((lightDir_35 + viewDir_36));
+				halfDir_41 = tmpvar_43;
+				mediump float tmpvar_44;
+				tmpvar_44 = max(0.0, dot(tmpvar_42, lightDir_35));
+				diff_40 = tmpvar_44;
+				lowp float tmpvar_45;
+				tmpvar_45 = max(0.0, dot(tmpvar_42, halfDir_41));
+				mediump float tmpvar_46;
+				tmpvar_46 = (pow(tmpvar_45, (_Shininess * 128.0)) * tmpvar_14);
+				spec_39 = tmpvar_46;
+				c_38.xyz = ((_LightColor0.xyz * (
+					(tmpvar_12 * diff_40)
+					+
+					(spec_39 * _SpecColor.xyz)
+					)) * atn_37);
+				c_38.w = (tmpvar_15 + ((_LightColor0.w * _SpecColor.w) * (spec_39 * atn_37)));
+				c_2 = (c_2 + c_38);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				gl_FragData[0] = c_2;
 			}
 
@@ -6839,6 +7085,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in highp vec4 in_POSITION0;
@@ -7047,6 +7295,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform lowp sampler2D _MainTex;
@@ -7061,19 +7311,22 @@ Shader "KSP/Specular Layered" {
 			in lowp vec3 vs_TEXCOORD4;
 			in mediump vec4 vs_TEXCOORD5;
 			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec3 t0;
+			highp vec2 t0;
+			lowp vec4 t10_0;
 			highp vec4 t1;
 			highp vec4 t2;
+			mediump vec4 t16_2;
+			highp vec3 t3;
 			lowp vec4 t10_3;
-			lowp vec4 t10_4;
-			lowp vec3 t10_5;
+			lowp vec3 t10_4;
+			mediump float t16_5;
 			mediump float t16_6;
 			highp vec3 t7;
-			mediump float t16_13;
+			mediump vec3 t16_12;
 			highp vec2 t14;
 			mediump float t16_14;
+			mediump float t16_19;
 			highp float t22;
-			lowp float t10_26;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -7103,13 +7356,15 @@ Shader "KSP/Specular Layered" {
 				t16_14 = vs_COLOR0.w;
 				t16_14 = clamp(t16_14, 0.0, 1.0);
 				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
 				t10_4.x = dot(t2.xyz, t2.xyz);
 				t10_4.x = inversesqrt(t10_4.x);
 				t10_4.xyz = t2.xyz * t10_4.xxx;
-				t10_4.w = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = max(t16_5, 0.0);
 				t1.x = t1.y * t1.y;
 				t1.x = t1.y * t1.x + 0.200000003;
 				t0.x = t0.x * t1.x;
@@ -7119,40 +7374,48 @@ Shader "KSP/Specular Layered" {
 				t1.xyz = (-t1.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t22 = dot(t1.xyz, t1.xyz);
 				t22 = inversesqrt(t22);
-				t10_5.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_26 = dot(t10_5.xyz, t10_5.xyz);
-				t10_26 = inversesqrt(t10_26);
-				t10_5.xyz = vec3(t10_26) * t10_5.xyz;
-				t10_4.x = dot(t10_4.xyz, t10_5.xyz);
-				t10_4.xw = max(t10_4.xw, vec2(0.0, 0.0));
-				t16_6 = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6 = t16_6 * t16_13;
-				t16_6 = exp2(t16_6);
-				t16_6 = t0.x * t16_6;
-				t10_4.xyz = t7.xyz * t10_4.www + vec3(t16_6);
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t1.xyz = vec3(t22) * t1.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * vec3(t16_5) + t10_4.xyz;
+				t10_0.xyz = t7.xyz * vs_TEXCOORD4.xyz;
 				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
 				vec3 txVec0 = vec3(vs_TEXCOORD5.xy,vs_TEXCOORD5.z);
-				t16_6 = textureLod(hlslcc_zcmp_ShadowMapTexture, txVec0, 0.0);
-				t16_13 = (-_LightShadowData.x) + 1.0;
-				t16_6 = t16_6 * t16_13 + _LightShadowData.x;
-				t10_4.xyz = t10_4.xyz * vec3(t16_6);
-				t10_4.xyz = t7.xyz * vs_TEXCOORD4.xyz + t10_4.xyz;
-				t0.xyz = t10_5.yyy * vs_TEXCOORD2.xyz;
-				t0.xyz = vs_TEXCOORD1.xyz * t10_5.xxx + t0.xyz;
-				t0.xyz = vs_TEXCOORD3.xyz * t10_5.zzz + t0.xyz;
-				t0.x = dot(t0.xyz, t0.xyz);
-				t0.x = inversesqrt(t0.x);
-				t0.x = t0.x * t0.z;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t0.x = (-t0.x) + 1.0;
-				t0.x = log2(t0.x);
-				t0.x = t0.x * _RimFalloff;
-				t0.x = exp2(t0.x);
-				t0.xyz = t0.xxx * _RimColor.xyz;
-				t0.xyz = t0.xyz * _RimColor.www;
-				SV_Target0.xyz = t0.xyz * vec3(_Opacity) + t10_4.xyz;
-				SV_Target0.w = 1.0;
+				t16_5 = textureLod(hlslcc_zcmp_ShadowMapTexture, txVec0, 0.0);
+				t16_19 = (-_LightShadowData.x) + 1.0;
+				t16_5 = t16_5 * t16_19 + _LightShadowData.x;
+				t16_2.xyz = t10_4.xyz * vec3(t16_5);
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t10_4.x = t16_12.x * t10_4.x;
+				t16_2.w = t10_4.x * t16_5 + _Opacity;
+				t10_0.w = 0.0;
+				t10_0 = t10_0 + t16_2;
+				t3.xyz = t1.yyy * vs_TEXCOORD2.xyz;
+				t1.xyw = vs_TEXCOORD1.xyz * t1.xxx + t3.xyz;
+				t1.xyz = vs_TEXCOORD3.xyz * t1.zzz + t1.xyw;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.x = t1.x * t1.z;
+				t1.x = clamp(t1.x, 0.0, 1.0);
+				t1.x = (-t1.x) + 1.0;
+				t1.x = log2(t1.x);
+				t1.x = t1.x * _RimFalloff;
+				t1.x = exp2(t1.x);
+				t1.xyz = t1.xxx * _RimColor.xyz;
+				t3.xyz = _TemperatureColor.www * _TemperatureColor.xyz;
+				t1.xyz = t1.xyz * _RimColor.www + t3.xyz;
+				SV_Target0.xyz = t1.xyz * vec3(_Opacity) + t10_0.xyz;
+				SV_Target0.w = t10_0.w;
 				return;
 			}
 
@@ -7396,21 +7659,24 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 68 math, 2 textures
+			// Stats: 77 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
+				Vector 9[_BurnColor]
 				Vector 2[_LightColor0]
-				Float 4[_Opacity]
-				Vector 6[_RimColor]
-				Float 5[_RimFalloff]
-				Float 3[_Shininess]
+				Float 5[_Opacity]
+				Vector 7[_RimColor]
+				Float 6[_RimFalloff]
+				Float 4[_Shininess]
+				Vector 3[_SpecColor]
+				Vector 8[_TemperatureColor]
 				Vector 0[_WorldSpaceCameraPos]
 				Vector 1[_WorldSpaceLightPos0]
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
 				"ps_3_0
-				def c7, 1, 3, -2, -1
-				def c8, 1, 1.39999998, 0.200000003, 0
-				def c9, 128, 0, 0, 0
+				def c10, 1, 3, -2, -1
+				def c11, 1, 1.39999998, 0.200000003, 0
+				def c12, 128, 0, 0, 0
 				dcl_texcoord v0
 				dcl_texcoord1 v1
 				dcl_texcoord2 v2
@@ -7419,7 +7685,7 @@ Shader "KSP/Specular Layered" {
 				dcl_texcoord4_pp v5.xyz
 				dcl_2d s0
 				dcl_2d s1
-				mul r0.x, c7.y, v0.z
+				mul r0.x, c10.y, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s0
 				mov r2.xz, r1
@@ -7427,69 +7693,81 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c7.y, c7.zwzw
+				mad_sat r0.xy, v0.z, c10.y, c10.zwzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, c8.xxyw
+				add r0.yz, -r1.x, c11.xxyw
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v4, r0.x
 				add r0.xyw, -r2.xyzz, v4.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v4.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mov r3.x, v1.z
-				mov r3.y, v2.z
-				mov r3.z, v3.z
-				nrm_pp r4.xyz, r3
-				dp3_pp r0.x, r4, c1
-				max_pp r1.y, r0.x, c8.w
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c8.z
-				mul_pp r0.x, r1.x, r0.x
-				mov r3.x, v1.w
-				mov r3.y, v2.w
-				mov r3.z, v3.w
-				add r0.yzw, -r3.xxyz, c0.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c9.xyzz
+				mov r2.x, v1.z
+				mov r2.y, v2.z
+				mov r2.z, v3.z
+				nrm_pp r3.xyz, r2
+				dp3_pp r1.y, r3, c1
+				max_pp r2.x, r1.y, c11.w
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c11.z
+				mul_pp r0.z, r1.x, r0.z
+				mov r1.x, v1.w
+				mov r1.y, v2.w
+				mov r1.z, v3.w
+				add r1.xyz, -r1, c0
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				mad_pp r2.yzw, r1.xxyz, r1.w, c1.xxyz
+				mul_pp r1.xyz, r1.w, r1
+				nrm_pp r4.xyz, r2.yzww
+				dp3_pp r1.w, r3, r4
+				max_pp r2.y, r1.w, c11.w
+				mov r3.x, c4.x
+				mul_pp r1.w, r3.x, c12.x
+				pow_pp r3.x, r2.y, r1.w
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r2.yzw, r0.z, c3.xxyz
+				mad_pp r2.xyz, r0.xyww, r2.x, r2.yzww
+				mul_pp r3.xyz, r0.xyww, v5
+				mul_pp r2.xyz, r2, c2
+				mov r0.w, c2.w
+				mul_pp r0.x, r0.w, c3.w
+				mad_pp r2.w, r0.x, r0.z, c5.x
+				mov r3.w, c11.w
+				add_pp r0, r2, r3
+				mul r2.xyz, r1.y, v2
+				mad r1.xyw, v1.xyzz, r1.x, r2.xyzz
+				mad_pp r1.xyz, v3, r1.z, r1.xyww
+				dp3 r1.x, r1, r1
 				rsq r1.x, r1.x
-				mad_pp r0.yzw, r0, r1.x, c1.xxyz
-				nrm_pp r3.xyz, r0.yzww
-				dp3_pp r0.y, r4, r3
-				max_pp r1.x, r0.y, c8.w
-				mov r4.x, c3.x
-				mul_pp r0.y, r4.x, c9.x
-				pow_pp r2.w, r1.x, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.y, r0.x
-				mul_pp r0.xyz, r0, c2
-				mad_pp r0.xyz, r2, v5, r0
-				mul r1.xyz, r3.y, v2
-				mad r1.xyz, v1, r3.x, r1
-				mad_pp r1.xyz, v3, r3.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul_sat r0.w, r0.w, r1.z
-				add_pp r0.w, -r0.w, c7.x
-				pow r1.x, r0.w, c5.x
-				mul r1.xyz, r1.x, c6
-				mul_pp r1.xyz, r1, c6.w
-				mad_pp oC0.xyz, r1, c4.x, r0
-				mov_pp oC0.w, c7.x
+				mul_sat r1.x, r1.x, r1.z
+				add_pp r1.x, -r1.x, c10.x
+				pow r2.x, r1.x, c6.x
+				mul r1.xyz, r2.x, c7
+				mul r2.xyz, c8.w, c8
+				mad_pp r1.xyz, r1, c7.w, r2
+				mad_pp oC0.xyz, r1, c5.x, r0
+				mov_pp oC0.w, r0.w
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 54 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
-				ConstBuffer "$Globals" 208
+				ConstBuffer "$Globals" 240
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 144[_Shininess]
 				Float 148[_Opacity]
 				Float 152[_RimFalloff]
 				Vector 160[_RimColor]
+				Vector 176[_TemperatureColor]
+				Vector 192[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -7499,7 +7777,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:acadacaa
-				eefiecedhpckppfpfgclncioefmdcpbbjgeodaocabaaaaaaoeajaaaaadaaaaaa
+				eefiecedpgnmolphiebifikdbnpadocnhinbjgheabaaaaaaoaakaaaaadaaaaaa
 				cmaaaaaabiabaaaaemabaaaaejfdeheooeaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaaneaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaaneaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -7509,8 +7787,8 @@ Shader "KSP/Specular Layered" {
 				ahahaaaaneaaaaaaahaaaaaaaaaaaaaaadaaaaaaahaaaaaaapaaaaaafdfgfpfa
 				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklepfdeheocmaaaaaa
 				abaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapaaaaaa
-				fdfgfpfegbhcghgfheaaklklfdeieefcjaaiaaaaeaaaaaaaceacaaaafjaaaaae
-				egiocaaaaaaaaaaaalaaaaaafjaaaaaeegiocaaaabaaaaaaafaaaaaafjaaaaae
+				fdfgfpfegbhcghgfheaaklklfdeieefcimajaaaaeaaaaaaagdacaaaafjaaaaae
+				egiocaaaaaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaaafaaaaaafjaaaaae
 				egiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaafkaaaaadaagabaaa
 				abaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaafibiaaaeaahabaaaabaaaaaa
 				ffffaaaagcbaaaadpcbabaaaabaaaaaagcbaaaadpcbabaaaacaaaaaagcbaaaad
@@ -7539,7 +7817,8 @@ Shader "KSP/Specular Layered" {
 				agajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaafgafbaia
 				ebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaadkbabaaa
 				afaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaaabaaaaaa
-				fgafbaaaaaaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaaacaaaaaadgaaaaaf
+				fgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaa
+				aaaaaaaaamaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaaacaaaaaadgaaaaaf
 				ccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaafecaabaaaacaaaaaackbabaaa
 				aeaaaaaabaaaaaahbcaabaaaabaaaaaaegacbaaaacaaaaaaegacbaaaacaaaaaa
 				eeaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaahncaabaaaabaaaaaa
@@ -7552,33 +7831,40 @@ Shader "KSP/Specular Layered" {
 				ccaabaaaadaaaaaadkbabaaaadaaaaaadgaaaaafecaabaaaadaaaaaadkbabaaa
 				aeaaaaaaaaaaaaajocaabaaaacaaaaaaagajbaiaebaaaaaaadaaaaaaagijcaaa
 				abaaaaaaaeaaaaaabaaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaajgahbaaa
-				acaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadcaaaaakocaabaaa
-				acaaaaaafgaobaaaacaaaaaafgafbaaaabaaaaaaagijcaaaacaaaaaaaaaaaaaa
-				baaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaajgahbaaaacaaaaaaeeaaaaaf
-				ccaabaaaabaaaaaabkaabaaaabaaaaaadiaaaaahocaabaaaacaaaaaafgafbaaa
-				abaaaaaafgaobaaaacaaaaaabaaaaaahbcaabaaaabaaaaaaigadbaaaabaaaaaa
-				jgahbaaaacaaaaaadeaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaaabeaaaaa
-				aaaaaaaacpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiccaabaaa
-				abaaaaaaakiacaaaaaaaaaaaajaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaa
-				abaaaaaaakaabaaaabaaaaaabkaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaa
-				akaabaaaabaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaa
-				abaaaaaadcaaaaajhcaabaaaabaaaaaajgahbaaaaaaaaaaaagaabaaaacaaaaaa
-				agaabaaaaaaaaaaadiaaaaaihcaabaaaabaaaaaaegacbaaaabaaaaaaegiccaaa
-				aaaaaaaaagaaaaaadcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaaegbcbaaa
-				agaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaabaaaaaakgakbaaaacaaaaaa
-				egbcbaaaadaaaaaadcaaaaajhcaabaaaabaaaaaaegbcbaaaacaaaaaafgafbaaa
-				acaaaaaaegacbaaaabaaaaaadcaaaaajhcaabaaaabaaaaaaegbcbaaaaeaaaaaa
-				pgapbaaaacaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaa
-				abaaaaaaegacbaaaabaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaa
-				dicaaaahicaabaaaaaaaaaaadkaabaaaaaaaaaaackaabaaaabaaaaaaaaaaaaai
-				icaabaaaaaaaaaaadkaabaiaebaaaaaaaaaaaaaaabeaaaaaaaaaiadpcpaaaaaf
-				icaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaaiicaabaaaaaaaaaaadkaabaaa
-				aaaaaaaackiacaaaaaaaaaaaajaaaaaabjaaaaaficaabaaaaaaaaaaadkaabaaa
-				aaaaaaaadiaaaaaihcaabaaaabaaaaaapgapbaaaaaaaaaaaegiccaaaaaaaaaaa
-				akaaaaaadiaaaaaihcaabaaaabaaaaaaegacbaaaabaaaaaapgipcaaaaaaaaaaa
-				akaaaaaadcaaaaakhccabaaaaaaaaaaaegacbaaaabaaaaaafgifcaaaaaaaaaaa
-				ajaaaaaaegacbaaaaaaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaaaaaaiadp
-				doaaaaab"
+				acaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadcaaaaakhcaabaaa
+				adaaaaaajgahbaaaacaaaaaafgafbaaaabaaaaaaegiccaaaacaaaaaaaaaaaaaa
+				diaaaaahocaabaaaacaaaaaafgafbaaaabaaaaaafgaobaaaacaaaaaabaaaaaah
+				ccaabaaaabaaaaaaegacbaaaadaaaaaaegacbaaaadaaaaaaeeaaaaafccaabaaa
+				abaaaaaabkaabaaaabaaaaaadiaaaaahhcaabaaaadaaaaaafgafbaaaabaaaaaa
+				egacbaaaadaaaaaabaaaaaahbcaabaaaabaaaaaaigadbaaaabaaaaaaegacbaaa
+				adaaaaaadeaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaaabeaaaaaaaaaaaaa
+				cpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiccaabaaaabaaaaaa
+				akiacaaaaaaaaaaaajaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaaabaaaaaa
+				akaabaaaabaaaaaabkaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaaakaabaaa
+				abaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaaabaaaaaa
+				diaaaaaihcaabaaaabaaaaaaagaabaaaaaaaaaaaegiccaaaaaaaaaaaahaaaaaa
+				dcaaaaajhcaabaaaabaaaaaajgahbaaaaaaaaaaaagaabaaaacaaaaaaegacbaaa
+				abaaaaaadiaaaaahhcaabaaaadaaaaaajgahbaaaaaaaaaaaegbcbaaaagaaaaaa
+				diaaaaaihcaabaaaabaaaaaaegacbaaaabaaaaaaegiccaaaaaaaaaaaagaaaaaa
+				diaaaaajccaabaaaaaaaaaaadkiacaaaaaaaaaaaagaaaaaadkiacaaaaaaaaaaa
+				ahaaaaaadcaaaaakicaabaaaabaaaaaabkaabaaaaaaaaaaaakaabaaaaaaaaaaa
+				bkiacaaaaaaaaaaaajaaaaaadgaaaaaficaabaaaadaaaaaaabeaaaaaaaaaaaaa
+				aaaaaaahpcaabaaaaaaaaaaaegaobaaaabaaaaaaegaobaaaadaaaaaadiaaaaah
+				hcaabaaaabaaaaaakgakbaaaacaaaaaaegbcbaaaadaaaaaadcaaaaajhcaabaaa
+				abaaaaaaegbcbaaaacaaaaaafgafbaaaacaaaaaaegacbaaaabaaaaaadcaaaaaj
+				hcaabaaaabaaaaaaegbcbaaaaeaaaaaapgapbaaaacaaaaaaegacbaaaabaaaaaa
+				baaaaaahbcaabaaaabaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaeeaaaaaf
+				bcaabaaaabaaaaaaakaabaaaabaaaaaadicaaaahbcaabaaaabaaaaaaakaabaaa
+				abaaaaaackaabaaaabaaaaaaaaaaaaaibcaabaaaabaaaaaaakaabaiaebaaaaaa
+				abaaaaaaabeaaaaaaaaaiadpcpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaa
+				diaaaaaibcaabaaaabaaaaaaakaabaaaabaaaaaackiacaaaaaaaaaaaajaaaaaa
+				bjaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaihcaabaaaabaaaaaa
+				agaabaaaabaaaaaaegiccaaaaaaaaaaaakaaaaaadiaaaaajhcaabaaaacaaaaaa
+				pgipcaaaaaaaaaaaalaaaaaaegiccaaaaaaaaaaaalaaaaaadcaaaaakhcaabaaa
+				abaaaaaaegacbaaaabaaaaaapgipcaaaaaaaaaaaakaaaaaaegacbaaaacaaaaaa
+				dcaaaaakhccabaaaaaaaaaaaegacbaaaabaaaaaafgifcaaaaaaaaaaaajaaaaaa
+				egacbaaaaaaaaaaadgaaaaaficcabaaaaaaaaaaadkaabaaaaaaaaaaadoaaaaab
+				"
 		}
 		SubProgram "gles " {
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
@@ -7589,18 +7875,21 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 56 math, 2 textures
+			// Stats: 61 math, 2 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_OFF" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
-				ConstBuffer "$Globals" 64
+				ConstBuffer "$Globals" 112
 				Vector 0[_WorldSpaceCameraPos] 3
 				VectorHalf 16[_WorldSpaceLightPos0] 4
 				VectorHalf 24[_LightColor0] 4
-				ScalarHalf 32[_Shininess]
-				Float 36[_Opacity]
-				Float 40[_RimFalloff]
-				Vector 48[_RimColor]
+				VectorHalf 32[_SpecColor] 4
+				ScalarHalf 40[_Shininess]
+				Float 44[_Opacity]
+				Float 48[_RimFalloff]
+				Vector 64[_RimColor]
+				Vector 80[_TemperatureColor]
+				Vector 96[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -7619,10 +7908,13 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				half4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half _Shininess;
 				float _Opacity;
 				float _RimFalloff;
 				float4 _RimColor;
+				float4 _TemperatureColor;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _MainTex[[texture(0)]], sampler _mtlsmp__MainTex[[sampler(0)]]
@@ -7646,43 +7938,43 @@ Shader "KSP/Specular Layered" {
 				float3 tmpvar_10;
 				tmpvar_10 = normalize((_mtl_u._WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = half3(tmpvar_10);
-				half3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				float3 tmpvar_12;
-				tmpvar_12 = (((_mtl_i.xlv_TEXCOORD1.xyz * (float)tmpvar_11.x) + (_mtl_i.xlv_TEXCOORD2.xyz * (float)tmpvar_11.y)) + (_mtl_i.xlv_TEXCOORD3.xyz * (float)tmpvar_11.z));
-				viewDir_3 = half3(tmpvar_12);
+				float3 tmpvar_11;
+				tmpvar_11 = (((_mtl_i.xlv_TEXCOORD1.xyz * (float)worldViewDir_4.x) + (_mtl_i.xlv_TEXCOORD2.xyz * (float)worldViewDir_4.y)) + (_mtl_i.xlv_TEXCOORD3.xyz * (float)worldViewDir_4.z));
+				viewDir_3 = half3(tmpvar_11);
 				tmpvar_6 = float3(viewDir_3);
 				tmpvar_7 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_12;
 				half3 tmpvar_13;
-				half3 tmpvar_14;
+				half tmpvar_14;
 				half tmpvar_15;
-				float4 mask_16;
-				float4 color_17;
-				half4 tmpvar_18;
-				tmpvar_18 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_17 = float4(tmpvar_18);
+				float3 emission_16;
+				float4 mask_17;
+				float4 color_18;
 				half4 tmpvar_19;
-				tmpvar_19 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_16 = float4(tmpvar_19);
-				float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				half tmpvar_21;
-				tmpvar_21 = half((1.0 - tmpvar_20));
-				float3 tmpvar_22;
-				tmpvar_22 = ((_mtl_u._RimColor.xyz * pow((float)tmpvar_21, _mtl_u._RimFalloff)) * _mtl_u._RimColor.w);
+				tmpvar_19 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_18 = float4(tmpvar_19);
+				half4 tmpvar_20;
+				tmpvar_20 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_17 = float4(tmpvar_20);
+				float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				half tmpvar_22;
+				tmpvar_22 = half((1.0 - tmpvar_21));
+				emission_16 = (((_mtl_u._RimColor.xyz *
+					pow((float)tmpvar_22, _mtl_u._RimFalloff)
+					) * _mtl_u._RimColor.w) + (_mtl_u._TemperatureColor.xyz * _mtl_u._TemperatureColor.w));
 				float2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				float2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				float2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				float2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				float2 tmpvar_27;
 				float tmpvar_28;
 				tmpvar_28 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
@@ -7693,12 +7985,13 @@ Shader "KSP/Specular Layered" {
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(float3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
 					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = half3(tmpvar_29);
-				tmpvar_14 = half3(tmpvar_22);
+				tmpvar_12 = half3((tmpvar_29 * _mtl_u._BurnColor.xyz));
+				tmpvar_13 = half3(emission_16);
 				float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = half(((tmpvar_30 + 0.2) * tmpvar_27.y));
-				tmpvar_14 = half3(((float3)tmpvar_14 * _mtl_u._Opacity));
+				tmpvar_14 = half(((tmpvar_30 + 0.2) * tmpvar_27.y));
+				tmpvar_13 = half3(((float3)tmpvar_13 * _mtl_u._Opacity));
+				tmpvar_15 = half(_mtl_u._Opacity);
 				c_2.w = half(0.0);
 				float tmpvar_31;
 				tmpvar_31 = _mtl_i.xlv_TEXCOORD1.z;
@@ -7709,23 +8002,32 @@ Shader "KSP/Specular Layered" {
 				float tmpvar_33;
 				tmpvar_33 = _mtl_i.xlv_TEXCOORD3.z;
 				worldN_1.z = half(tmpvar_33);
-				c_2.xyz = (tmpvar_13 * _mtl_i.xlv_TEXCOORD4);
-				half4 c_34;
-				half spec_35;
-				half3 tmpvar_36;
-				tmpvar_36 = normalize(worldN_1);
-				half tmpvar_37;
-				tmpvar_37 = max((half)0.0, dot(tmpvar_36, tmpvar_11));
-				half tmpvar_38;
-				tmpvar_38 = (pow(tmpvar_37, (_mtl_u._Shininess * (half)128.0)) * tmpvar_15);
-				spec_35 = tmpvar_38;
-				c_34.xyz = (_mtl_u._LightColor0.xyz * ((tmpvar_13 *
-					max((half)0.0, dot(tmpvar_36, lightDir_5))
-					) + spec_35));
-				c_34.w = half(1.0);
-				c_2 = (c_2 + c_34);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = half(1.0);
+				c_2.xyz = (tmpvar_12 * _mtl_i.xlv_TEXCOORD4);
+				half3 lightDir_34;
+				lightDir_34 = lightDir_5;
+				half3 viewDir_35;
+				viewDir_35 = worldViewDir_4;
+				half4 c_36;
+				half spec_37;
+				half diff_38;
+				half3 halfDir_39;
+				half3 tmpvar_40;
+				tmpvar_40 = normalize(worldN_1);
+				half3 tmpvar_41;
+				tmpvar_41 = normalize((lightDir_34 + viewDir_35));
+				halfDir_39 = tmpvar_41;
+				half tmpvar_42;
+				tmpvar_42 = max((half)0.0, dot(tmpvar_40, lightDir_34));
+				diff_38 = tmpvar_42;
+				half tmpvar_43;
+				tmpvar_43 = max((half)0.0, dot(tmpvar_40, halfDir_39));
+				half tmpvar_44;
+				tmpvar_44 = (pow(tmpvar_43, (_mtl_u._Shininess * (half)128.0)) * tmpvar_14);
+				spec_37 = tmpvar_44;
+				c_36.xyz = (_mtl_u._LightColor0.xyz * ((tmpvar_12 * diff_38) + (spec_37 * _mtl_u._SpecColor.xyz)));
+				c_36.w = (tmpvar_15 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * spec_37));
+				c_2 = (c_2 + c_36);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				_mtl_o._glesFragData_0 = c_2;
 				return _mtl_o;
 			}
@@ -7741,22 +8043,25 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 69 math, 3 textures
+			// Stats: 79 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
+				Vector 9[_BurnColor]
 				Vector 2[_LightColor0]
-				Float 4[_Opacity]
-				Vector 6[_RimColor]
-				Float 5[_RimFalloff]
-				Float 3[_Shininess]
+				Float 5[_Opacity]
+				Vector 7[_RimColor]
+				Float 6[_RimFalloff]
+				Float 4[_Shininess]
+				Vector 3[_SpecColor]
+				Vector 8[_TemperatureColor]
 				Vector 0[_WorldSpaceCameraPos]
 				Vector 1[_WorldSpaceLightPos0]
 				SetTexture 0[_ShadowMapTexture] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
 				"ps_3_0
-				def c7, 1, 3, -2, -1
-				def c8, 1, 1.39999998, 0.200000003, 0
-				def c9, 128, 0, 0, 0
+				def c10, 1, 3, -2, -1
+				def c11, 1, 1.39999998, 0.200000003, 0
+				def c12, 128, 0, 0, 0
 				dcl_texcoord v0
 				dcl_texcoord1 v1
 				dcl_texcoord2 v2
@@ -7767,7 +8072,7 @@ Shader "KSP/Specular Layered" {
 				dcl_2d s0
 				dcl_2d s1
 				dcl_2d s2
-				mul r0.x, c7.y, v0.z
+				mul r0.x, c10.y, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s1
 				mov r2.xz, r1
@@ -7775,72 +8080,85 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c7.y, c7.zwzw
+				mad_sat r0.xy, v0.z, c10.y, c10.zwzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, c8.xxyw
+				add r0.yz, -r1.x, c11.xxyw
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v4, r0.x
 				add r0.xyw, -r2.xyzz, v4.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v4.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mov r3.x, v1.z
-				mov r3.y, v2.z
-				mov r3.z, v3.z
-				nrm_pp r4.xyz, r3
-				dp3_pp r0.x, r4, c1
-				max_pp r1.y, r0.x, c8.w
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c8.z
-				mul_pp r0.x, r1.x, r0.x
-				mov r3.x, v1.w
-				mov r3.y, v2.w
-				mov r3.z, v3.w
-				add r0.yzw, -r3.xxyz, c0.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c9.xyzz
+				mov r2.x, v1.z
+				mov r2.y, v2.z
+				mov r2.z, v3.z
+				nrm_pp r3.xyz, r2
+				dp3_pp r1.y, r3, c1
+				max_pp r2.x, r1.y, c11.w
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c11.z
+				mul_pp r0.z, r1.x, r0.z
+				mov r1.x, v1.w
+				mov r1.y, v2.w
+				mov r1.z, v3.w
+				add r1.xyz, -r1, c0
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				mad_pp r2.yzw, r1.xxyz, r1.w, c1.xxyz
+				mul_pp r1.xyz, r1.w, r1
+				nrm_pp r4.xyz, r2.yzww
+				dp3_pp r1.w, r3, r4
+				max_pp r2.y, r1.w, c11.w
+				mov r3.x, c4.x
+				mul_pp r1.w, r3.x, c12.x
+				pow_pp r3.x, r2.y, r1.w
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r2.yzw, r0.z, c3.xxyz
+				mad_pp r2.xyz, r0.xyww, r2.x, r2.yzww
+				mul_pp r3.xyz, r0.xyww, v5
+				mul_pp r0.xyw, r2.xyzz, c2.xyzz
+				texldp_pp r2, v6, s0
+				mul_pp r4.xyz, r0.xyww, r2.x
+				mov r0.w, c2.w
+				mul_pp r0.x, r0.w, c3.w
+				mul_pp r0.x, r0.z, r0.x
+				mad_pp r4.w, r0.x, r2.x, c5.x
+				mov r3.w, c11.w
+				add_pp r0, r3, r4
+				mul r2.xyz, r1.y, v2
+				mad r1.xyw, v1.xyzz, r1.x, r2.xyzz
+				mad_pp r1.xyz, v3, r1.z, r1.xyww
+				dp3 r1.x, r1, r1
 				rsq r1.x, r1.x
-				mad_pp r0.yzw, r0, r1.x, c1.xxyz
-				nrm_pp r3.xyz, r0.yzww
-				dp3_pp r0.y, r4, r3
-				max_pp r1.x, r0.y, c8.w
-				mov r4.x, c3.x
-				mul_pp r0.y, r4.x, c9.x
-				pow_pp r2.w, r1.x, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.y, r0.x
-				mul_pp r0.xyz, r0, c2
-				texldp_pp r1, v6, s0
-				mul_pp r0.xyz, r0, r1.x
-				mad_pp r0.xyz, r2, v5, r0
-				mul r1.xyz, r3.y, v2
-				mad r1.xyz, v1, r3.x, r1
-				mad_pp r1.xyz, v3, r3.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul_sat r0.w, r0.w, r1.z
-				add_pp r0.w, -r0.w, c7.x
-				pow r1.x, r0.w, c5.x
-				mul r1.xyz, r1.x, c6
-				mul_pp r1.xyz, r1, c6.w
-				mad_pp oC0.xyz, r1, c4.x, r0
-				mov_pp oC0.w, c7.x
+				mul_sat r1.x, r1.x, r1.z
+				add_pp r1.x, -r1.x, c10.x
+				pow r2.x, r1.x, c6.x
+				mul r1.xyz, r2.x, c7
+				mul r2.xyz, c8.w, c8
+				mad_pp r1.xyz, r1, c7.w, r2
+				mad_pp oC0.xyz, r1, c5.x, r0
+				mov_pp oC0.w, r0.w
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 56 math, 3 textures
+			// Stats: 64 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				SetTexture 0[_MainTex] 2D 1
 				SetTexture 1[_Emissive] 2D 2
 				SetTexture 2[_ShadowMapTexture] 2D 0
-				ConstBuffer "$Globals" 208
+				ConstBuffer "$Globals" 240
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 144[_Shininess]
 				Float 148[_Opacity]
 				Float 152[_RimFalloff]
 				Vector 160[_RimColor]
+				Vector 176[_TemperatureColor]
+				Vector 192[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -7850,7 +8168,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:adadadaa
-				eefiecedhcnlfkjakjamejhdfbmggfajijohigecabaaaaaaiaakaaaaadaaaaaa
+				eefiecedmbmaoflaghjfnpkponhjfaoamiglhepaabaaaaaajialaaaaadaaaaaa
 				cmaaaaaadaabaaaageabaaaaejfdeheopmaaaaaaajaaaaaaaiaaaaaaoaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaaomaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaaomaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -7861,14 +8179,14 @@ Shader "KSP/Specular Layered" {
 				ahaaaaaaaaaaaaaaadaaaaaaaiaaaaaaapaaaaaafdfgfpfaepfdejfeejepeoaa
 				feeffiedepepfceeaaedepemepfcaaklepfdeheocmaaaaaaabaaaaaaaiaaaaaa
 				caaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapaaaaaafdfgfpfegbhcghgf
-				heaaklklfdeieefcbeajaaaaeaaaaaaaefacaaaafjaaaaaeegiocaaaaaaaaaaa
-				alaaaaaafjaaaaaeegiocaaaabaaaaaaafaaaaaafjaaaaaeegiocaaaacaaaaaa
+				heaaklklfdeieefccmakaaaaeaaaaaaailacaaaafjaaaaaeegiocaaaaaaaaaaa
+				anaaaaaafjaaaaaeegiocaaaabaaaaaaafaaaaaafjaaaaaeegiocaaaacaaaaaa
 				abaaaaaafkaaaaadaagabaaaaaaaaaaafkaaaaadaagabaaaabaaaaaafkaaaaad
 				aagabaaaacaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaafibiaaaeaahabaaa
 				abaaaaaaffffaaaafibiaaaeaahabaaaacaaaaaaffffaaaagcbaaaadpcbabaaa
 				abaaaaaagcbaaaadpcbabaaaacaaaaaagcbaaaadpcbabaaaadaaaaaagcbaaaad
 				pcbabaaaaeaaaaaagcbaaaadpcbabaaaafaaaaaagcbaaaadhcbabaaaagaaaaaa
-				gcbaaaadlcbabaaaahaaaaaagfaaaaadpccabaaaaaaaaaaagiaaaaacaeaaaaaa
+				gcbaaaadlcbabaaaahaaaaaagfaaaaadpccabaaaaaaaaaaagiaaaaacafaaaaaa
 				diaaaaahbcaabaaaaaaaaaaackbabaaaabaaaaaaabeaaaaaaaaaeaeadgcaaaaf
 				bcaabaaaaaaaaaaaakaabaaaaaaaaaaaefaaaaajpcaabaaaabaaaaaaegbabaaa
 				abaaaaaaeghobaaaaaaaaaaaaagabaaaabaaaaaadgaaaaafkcaabaaaacaaaaaa
@@ -7892,7 +8210,8 @@ Shader "KSP/Specular Layered" {
 				agajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaafgafbaia
 				ebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaadkbabaaa
 				afaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaaabaaaaaa
-				fgafbaaaaaaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaaacaaaaaadgaaaaaf
+				fgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaa
+				aaaaaaaaamaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaaacaaaaaadgaaaaaf
 				ccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaafecaabaaaacaaaaaackbabaaa
 				aeaaaaaabaaaaaahbcaabaaaabaaaaaaegacbaaaacaaaaaaegacbaaaacaaaaaa
 				eeaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaahncaabaaaabaaaaaa
@@ -7905,36 +8224,43 @@ Shader "KSP/Specular Layered" {
 				ccaabaaaadaaaaaadkbabaaaadaaaaaadgaaaaafecaabaaaadaaaaaadkbabaaa
 				aeaaaaaaaaaaaaajocaabaaaacaaaaaaagajbaiaebaaaaaaadaaaaaaagijcaaa
 				abaaaaaaaeaaaaaabaaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaajgahbaaa
-				acaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadcaaaaakocaabaaa
-				acaaaaaafgaobaaaacaaaaaafgafbaaaabaaaaaaagijcaaaacaaaaaaaaaaaaaa
-				baaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaajgahbaaaacaaaaaaeeaaaaaf
-				ccaabaaaabaaaaaabkaabaaaabaaaaaadiaaaaahocaabaaaacaaaaaafgafbaaa
-				abaaaaaafgaobaaaacaaaaaabaaaaaahbcaabaaaabaaaaaaigadbaaaabaaaaaa
-				jgahbaaaacaaaaaadeaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaaabeaaaaa
-				aaaaaaaacpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiccaabaaa
-				abaaaaaaakiacaaaaaaaaaaaajaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaa
-				abaaaaaaakaabaaaabaaaaaabkaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaa
-				akaabaaaabaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaa
-				abaaaaaadcaaaaajhcaabaaaabaaaaaajgahbaaaaaaaaaaaagaabaaaacaaaaaa
-				agaabaaaaaaaaaaadiaaaaaihcaabaaaabaaaaaaegacbaaaabaaaaaaegiccaaa
-				aaaaaaaaagaaaaaaaoaaaaahdcaabaaaadaaaaaaegbabaaaahaaaaaapgbpbaaa
-				ahaaaaaaefaaaaajpcaabaaaadaaaaaaegaabaaaadaaaaaaeghobaaaacaaaaaa
-				aagabaaaaaaaaaaadiaaaaahhcaabaaaabaaaaaaegacbaaaabaaaaaaagaabaaa
-				adaaaaaadcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaaegbcbaaaagaaaaaa
-				egacbaaaabaaaaaadiaaaaahhcaabaaaabaaaaaakgakbaaaacaaaaaaegbcbaaa
-				adaaaaaadcaaaaajhcaabaaaabaaaaaaegbcbaaaacaaaaaafgafbaaaacaaaaaa
-				egacbaaaabaaaaaadcaaaaajhcaabaaaabaaaaaaegbcbaaaaeaaaaaapgapbaaa
-				acaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaa
-				egacbaaaabaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadicaaaah
-				icaabaaaaaaaaaaadkaabaaaaaaaaaaackaabaaaabaaaaaaaaaaaaaiicaabaaa
-				aaaaaaaadkaabaiaebaaaaaaaaaaaaaaabeaaaaaaaaaiadpcpaaaaaficaabaaa
-				aaaaaaaadkaabaaaaaaaaaaadiaaaaaiicaabaaaaaaaaaaadkaabaaaaaaaaaaa
-				ckiacaaaaaaaaaaaajaaaaaabjaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaa
-				diaaaaaihcaabaaaabaaaaaapgapbaaaaaaaaaaaegiccaaaaaaaaaaaakaaaaaa
-				diaaaaaihcaabaaaabaaaaaaegacbaaaabaaaaaapgipcaaaaaaaaaaaakaaaaaa
-				dcaaaaakhccabaaaaaaaaaaaegacbaaaabaaaaaafgifcaaaaaaaaaaaajaaaaaa
-				egacbaaaaaaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaaaaaaiadpdoaaaaab
-				"
+				acaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadcaaaaakhcaabaaa
+				adaaaaaajgahbaaaacaaaaaafgafbaaaabaaaaaaegiccaaaacaaaaaaaaaaaaaa
+				diaaaaahocaabaaaacaaaaaafgafbaaaabaaaaaafgaobaaaacaaaaaabaaaaaah
+				ccaabaaaabaaaaaaegacbaaaadaaaaaaegacbaaaadaaaaaaeeaaaaafccaabaaa
+				abaaaaaabkaabaaaabaaaaaadiaaaaahhcaabaaaadaaaaaafgafbaaaabaaaaaa
+				egacbaaaadaaaaaabaaaaaahbcaabaaaabaaaaaaigadbaaaabaaaaaaegacbaaa
+				adaaaaaadeaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaaabeaaaaaaaaaaaaa
+				cpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiccaabaaaabaaaaaa
+				akiacaaaaaaaaaaaajaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaaabaaaaaa
+				akaabaaaabaaaaaabkaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaaakaabaaa
+				abaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaaabaaaaaa
+				diaaaaaihcaabaaaabaaaaaaagaabaaaaaaaaaaaegiccaaaaaaaaaaaahaaaaaa
+				dcaaaaajhcaabaaaabaaaaaajgahbaaaaaaaaaaaagaabaaaacaaaaaaegacbaaa
+				abaaaaaadiaaaaahhcaabaaaadaaaaaajgahbaaaaaaaaaaaegbcbaaaagaaaaaa
+				diaaaaaiocaabaaaaaaaaaaaagajbaaaabaaaaaaagijcaaaaaaaaaaaagaaaaaa
+				aoaaaaahdcaabaaaabaaaaaaegbabaaaahaaaaaapgbpbaaaahaaaaaaefaaaaaj
+				pcaabaaaabaaaaaaegaabaaaabaaaaaaeghobaaaacaaaaaaaagabaaaaaaaaaaa
+				diaaaaahhcaabaaaaeaaaaaajgahbaaaaaaaaaaaagaabaaaabaaaaaadiaaaaaj
+				ccaabaaaaaaaaaaadkiacaaaaaaaaaaaagaaaaaadkiacaaaaaaaaaaaahaaaaaa
+				diaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaabkaabaaaaaaaaaaadcaaaaak
+				icaabaaaaeaaaaaaakaabaaaaaaaaaaaakaabaaaabaaaaaabkiacaaaaaaaaaaa
+				ajaaaaaadgaaaaaficaabaaaadaaaaaaabeaaaaaaaaaaaaaaaaaaaahpcaabaaa
+				aaaaaaaaegaobaaaadaaaaaaegaobaaaaeaaaaaadiaaaaahhcaabaaaabaaaaaa
+				kgakbaaaacaaaaaaegbcbaaaadaaaaaadcaaaaajhcaabaaaabaaaaaaegbcbaaa
+				acaaaaaafgafbaaaacaaaaaaegacbaaaabaaaaaadcaaaaajhcaabaaaabaaaaaa
+				egbcbaaaaeaaaaaapgapbaaaacaaaaaaegacbaaaabaaaaaabaaaaaahbcaabaaa
+				abaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaeeaaaaafbcaabaaaabaaaaaa
+				akaabaaaabaaaaaadicaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaackaabaaa
+				abaaaaaaaaaaaaaibcaabaaaabaaaaaaakaabaiaebaaaaaaabaaaaaaabeaaaaa
+				aaaaiadpcpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaibcaabaaa
+				abaaaaaaakaabaaaabaaaaaackiacaaaaaaaaaaaajaaaaaabjaaaaafbcaabaaa
+				abaaaaaaakaabaaaabaaaaaadiaaaaaihcaabaaaabaaaaaaagaabaaaabaaaaaa
+				egiccaaaaaaaaaaaakaaaaaadiaaaaajhcaabaaaacaaaaaapgipcaaaaaaaaaaa
+				alaaaaaaegiccaaaaaaaaaaaalaaaaaadcaaaaakhcaabaaaabaaaaaaegacbaaa
+				abaaaaaapgipcaaaaaaaaaaaakaaaaaaegacbaaaacaaaaaadcaaaaakhccabaaa
+				aaaaaaaaegacbaaaabaaaaaafgifcaaaaaaaaaaaajaaaaaaegacbaaaaaaaaaaa
+				dgaaaaaficcabaaaaaaaaaaadkaabaaaaaaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
@@ -7953,19 +8279,22 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 57 math, 3 textures
+			// Stats: 63 math, 3 textures
 			Keywords{ "DIRECTIONAL" "SHADOWS_SCREEN" "SHADOWS_NATIVE" "LIGHTMAP_OFF" "DIRLIGHTMAP_OFF" "DYNAMICLIGHTMAP_OFF" }
 				SetTexture 0[_ShadowMapTexture] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
-				ConstBuffer "$Globals" 64
+				ConstBuffer "$Globals" 112
 				Vector 0[_WorldSpaceCameraPos] 3
 				VectorHalf 16[_WorldSpaceLightPos0] 4
 				VectorHalf 24[_LightColor0] 4
-				ScalarHalf 32[_Shininess]
-				Float 36[_Opacity]
-				Float 40[_RimFalloff]
-				Vector 48[_RimColor]
+				VectorHalf 32[_SpecColor] 4
+				ScalarHalf 40[_Shininess]
+				Float 44[_Opacity]
+				Float 48[_RimFalloff]
+				Vector 64[_RimColor]
+				Vector 80[_TemperatureColor]
+				Vector 96[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -7985,10 +8314,13 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				half4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half _Shininess;
 				float _Opacity;
 				float _RimFalloff;
 				float4 _RimColor;
+				float4 _TemperatureColor;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _ShadowMapTexture[[texture(0)]], sampler _mtlsmp__ShadowMapTexture[[sampler(0)]]
@@ -8013,43 +8345,43 @@ Shader "KSP/Specular Layered" {
 				float3 tmpvar_10;
 				tmpvar_10 = normalize((_mtl_u._WorldSpaceCameraPos - tmpvar_8));
 				worldViewDir_4 = half3(tmpvar_10);
-				half3 tmpvar_11;
-				tmpvar_11 = normalize((worldViewDir_4 + lightDir_5));
-				worldViewDir_4 = tmpvar_11;
-				float3 tmpvar_12;
-				tmpvar_12 = (((_mtl_i.xlv_TEXCOORD1.xyz * (float)tmpvar_11.x) + (_mtl_i.xlv_TEXCOORD2.xyz * (float)tmpvar_11.y)) + (_mtl_i.xlv_TEXCOORD3.xyz * (float)tmpvar_11.z));
-				viewDir_3 = half3(tmpvar_12);
+				float3 tmpvar_11;
+				tmpvar_11 = (((_mtl_i.xlv_TEXCOORD1.xyz * (float)worldViewDir_4.x) + (_mtl_i.xlv_TEXCOORD2.xyz * (float)worldViewDir_4.y)) + (_mtl_i.xlv_TEXCOORD3.xyz * (float)worldViewDir_4.z));
+				viewDir_3 = half3(tmpvar_11);
 				tmpvar_6 = float3(viewDir_3);
 				tmpvar_7 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_12;
 				half3 tmpvar_13;
-				half3 tmpvar_14;
+				half tmpvar_14;
 				half tmpvar_15;
-				float4 mask_16;
-				float4 color_17;
-				half4 tmpvar_18;
-				tmpvar_18 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_17 = float4(tmpvar_18);
+				float3 emission_16;
+				float4 mask_17;
+				float4 color_18;
 				half4 tmpvar_19;
-				tmpvar_19 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_16 = float4(tmpvar_19);
-				float tmpvar_20;
-				tmpvar_20 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
-				half tmpvar_21;
-				tmpvar_21 = half((1.0 - tmpvar_20));
-				float3 tmpvar_22;
-				tmpvar_22 = ((_mtl_u._RimColor.xyz * pow((float)tmpvar_21, _mtl_u._RimFalloff)) * _mtl_u._RimColor.w);
+				tmpvar_19 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_18 = float4(tmpvar_19);
+				half4 tmpvar_20;
+				tmpvar_20 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_17 = float4(tmpvar_20);
+				float tmpvar_21;
+				tmpvar_21 = clamp(normalize(tmpvar_6).z, 0.0, 1.0);
+				half tmpvar_22;
+				tmpvar_22 = half((1.0 - tmpvar_21));
+				emission_16 = (((_mtl_u._RimColor.xyz *
+					pow((float)tmpvar_22, _mtl_u._RimFalloff)
+					) * _mtl_u._RimColor.w) + (_mtl_u._TemperatureColor.xyz * _mtl_u._TemperatureColor.w));
 				float2 tmpvar_23;
-				tmpvar_23.x = color_17.x;
-				tmpvar_23.y = mask_16.x;
+				tmpvar_23.x = color_18.x;
+				tmpvar_23.y = mask_17.x;
 				float2 tmpvar_24;
-				tmpvar_24.x = color_17.y;
-				tmpvar_24.y = mask_16.y;
+				tmpvar_24.x = color_18.y;
+				tmpvar_24.y = mask_17.y;
 				float2 tmpvar_25;
-				tmpvar_25.x = color_17.z;
-				tmpvar_25.y = mask_16.z;
+				tmpvar_25.x = color_18.z;
+				tmpvar_25.y = mask_17.z;
 				float2 tmpvar_26;
-				tmpvar_26.x = color_17.w;
-				tmpvar_26.y = mask_16.w;
+				tmpvar_26.x = color_18.w;
+				tmpvar_26.y = mask_17.w;
 				float2 tmpvar_27;
 				float tmpvar_28;
 				tmpvar_28 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
@@ -8060,39 +8392,57 @@ Shader "KSP/Specular Layered" {
 				tmpvar_29 = mix(tmpvar_27.xxx, mix(mix(float3(
 					clamp((tmpvar_27.x + ((1.0 - tmpvar_27.y) * (tmpvar_27.x * tmpvar_27.x))), 0.0, 1.0)
 					), tmpvar_7.xyz, tmpvar_27.yyy), tmpvar_7.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_13 = half3(tmpvar_29);
-				tmpvar_14 = half3(tmpvar_22);
+				tmpvar_12 = half3((tmpvar_29 * _mtl_u._BurnColor.xyz));
+				tmpvar_13 = half3(emission_16);
 				float tmpvar_30;
 				tmpvar_30 = pow(((1.0 - tmpvar_27.y) + 0.4), 3.0);
-				tmpvar_15 = half(((tmpvar_30 + 0.2) * tmpvar_27.y));
-				tmpvar_14 = half3(((float3)tmpvar_14 * _mtl_u._Opacity));
+				tmpvar_14 = half(((tmpvar_30 + 0.2) * tmpvar_27.y));
+				tmpvar_13 = half3(((float3)tmpvar_13 * _mtl_u._Opacity));
+				tmpvar_15 = half(_mtl_u._Opacity);
+				half tmpvar_31;
+				tmpvar_31 = _ShadowMapTexture.sample(_mtlsmp__ShadowMapTexture, ((float2)(_mtl_i.xlv_TEXCOORD5).xy / (float)(_mtl_i.xlv_TEXCOORD5).w)).x;
 				c_2.w = half(0.0);
-				float tmpvar_31;
-				tmpvar_31 = _mtl_i.xlv_TEXCOORD1.z;
-				worldN_1.x = half(tmpvar_31);
 				float tmpvar_32;
-				tmpvar_32 = _mtl_i.xlv_TEXCOORD2.z;
-				worldN_1.y = half(tmpvar_32);
+				tmpvar_32 = _mtl_i.xlv_TEXCOORD1.z;
+				worldN_1.x = half(tmpvar_32);
 				float tmpvar_33;
-				tmpvar_33 = _mtl_i.xlv_TEXCOORD3.z;
-				worldN_1.z = half(tmpvar_33);
-				c_2.xyz = (tmpvar_13 * _mtl_i.xlv_TEXCOORD4);
-				half4 c_34;
-				half spec_35;
-				half3 tmpvar_36;
-				tmpvar_36 = normalize(worldN_1);
-				half tmpvar_37;
-				tmpvar_37 = max((half)0.0, dot(tmpvar_36, tmpvar_11));
-				half tmpvar_38;
-				tmpvar_38 = (pow(tmpvar_37, (_mtl_u._Shininess * (half)128.0)) * tmpvar_15);
-				spec_35 = tmpvar_38;
-				c_34.xyz = ((_mtl_u._LightColor0.xyz * (
-					(tmpvar_13 * max((half)0.0, dot(tmpvar_36, lightDir_5)))
-					+ spec_35)) * _ShadowMapTexture.sample(_mtlsmp__ShadowMapTexture, ((float2)(_mtl_i.xlv_TEXCOORD5).xy / (float)(_mtl_i.xlv_TEXCOORD5).w)).x);
-				c_34.w = half(1.0);
-				c_2 = (c_2 + c_34);
-				c_2.xyz = (c_2.xyz + tmpvar_14);
-				c_2.w = half(1.0);
+				tmpvar_33 = _mtl_i.xlv_TEXCOORD2.z;
+				worldN_1.y = half(tmpvar_33);
+				float tmpvar_34;
+				tmpvar_34 = _mtl_i.xlv_TEXCOORD3.z;
+				worldN_1.z = half(tmpvar_34);
+				c_2.xyz = (tmpvar_12 * _mtl_i.xlv_TEXCOORD4);
+				half3 lightDir_35;
+				lightDir_35 = lightDir_5;
+				half3 viewDir_36;
+				viewDir_36 = worldViewDir_4;
+				half atn_37;
+				atn_37 = tmpvar_31;
+				half4 c_38;
+				half spec_39;
+				half diff_40;
+				half3 halfDir_41;
+				half3 tmpvar_42;
+				tmpvar_42 = normalize(worldN_1);
+				half3 tmpvar_43;
+				tmpvar_43 = normalize((lightDir_35 + viewDir_36));
+				halfDir_41 = tmpvar_43;
+				half tmpvar_44;
+				tmpvar_44 = max((half)0.0, dot(tmpvar_42, lightDir_35));
+				diff_40 = tmpvar_44;
+				half tmpvar_45;
+				tmpvar_45 = max((half)0.0, dot(tmpvar_42, halfDir_41));
+				half tmpvar_46;
+				tmpvar_46 = (pow(tmpvar_45, (_mtl_u._Shininess * (half)128.0)) * tmpvar_14);
+				spec_39 = tmpvar_46;
+				c_38.xyz = ((_mtl_u._LightColor0.xyz * (
+					(tmpvar_12 * diff_40)
+					+
+					(spec_39 * _mtl_u._SpecColor.xyz)
+					)) * atn_37);
+				c_38.w = (tmpvar_15 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * (spec_39 * atn_37)));
+				c_2 = (c_2 + c_38);
+				c_2.xyz = (c_2.xyz + tmpvar_13);
 				_mtl_o._glesFragData_0 = c_2;
 				return _mtl_o;
 			}
@@ -8106,22 +8456,22 @@ Shader "KSP/Specular Layered" {
 		// Stats for Vertex shader:
 		//       d3d11 : 34 math
 		//        d3d9 : 35 math
-		//        gles : 45 avg math (40..52), 3 avg texture (2..4)
+		//        gles : 49 avg math (43..56), 3 avg texture (2..4)
 		//       metal : 19 math
-		//      opengl : 45 avg math (40..52), 3 avg texture (2..4)
+		//      opengl : 49 avg math (43..56), 3 avg texture (2..4)
 		// Stats for Fragment shader:
-		//       d3d11 : 47 avg math (39..55), 3 avg texture (2..4)
-		//        d3d9 : 59 avg math (51..66), 3 avg texture (2..4)
-		//       metal : 45 avg math (40..52), 3 avg texture (2..4)
+		//       d3d11 : 52 avg math (44..60), 3 avg texture (2..4)
+		//        d3d9 : 63 avg math (55..71), 3 avg texture (2..4)
+		//       metal : 49 avg math (43..56), 3 avg texture (2..4)
 		Pass{
 		Name "FORWARD"
 		Tags{ "LIGHTMODE" = "ForwardAdd" "RenderType" = "Opaque" }
 		ZWrite Off
 		Blend One One
-		GpuProgramID 75109
+		GpuProgramID 123859
 		Program "vp" {
 		SubProgram "opengl " {
-			// Stats: 46 math, 3 textures
+			// Stats: 50 math, 3 textures
 			Keywords{ "POINT" }
 				"!!GLSL#version 120
 
@@ -8200,11 +8550,14 @@ Shader "KSP/Specular Layered" {
 			uniform vec3 _WorldSpaceCameraPos;
 			uniform vec4 _WorldSpaceLightPos0;
 			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
 			uniform sampler2D _LightTexture0;
 			uniform mat4 _LightMatrix0;
 			uniform float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
+			uniform float _Opacity;
+			uniform vec4 _BurnColor;
 			varying vec4 xlv_TEXCOORD0;
 			varying vec3 xlv_TEXCOORD1;
 			varying vec3 xlv_TEXCOORD2;
@@ -8214,5177 +8567,8 @@ Shader "KSP/Specular Layered" {
 			void main()
 			{
 				vec3 worldN_1;
-				vec4 c_2;
-				vec3 tmpvar_3;
-				tmpvar_3 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				vec4 tmpvar_4;
-				tmpvar_4 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_6;
-				tmpvar_6.x = tmpvar_4.x;
-				tmpvar_6.y = tmpvar_5.x;
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_4.y;
-				tmpvar_7.y = tmpvar_5.y;
-				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_4.z;
-				tmpvar_8.y = tmpvar_5.z;
-				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_4.w;
-				tmpvar_9.y = tmpvar_5.w;
-				vec2 tmpvar_10;
-				float tmpvar_11;
-				tmpvar_11 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_10 = mix(mix(tmpvar_6, tmpvar_7, vec2(clamp(tmpvar_11, 0.0, 1.0))), mix(tmpvar_8, tmpvar_9, vec2(clamp(
-					(tmpvar_11 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_11 - 1.0), 0.0, 1.0)));
-				vec4 tmpvar_12;
-				tmpvar_12.w = 1.0;
-				tmpvar_12.xyz = xlv_TEXCOORD4;
-				vec3 tmpvar_13;
-				tmpvar_13 = (_LightMatrix0 * tmpvar_12).xyz;
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				vec4 c_14;
-				vec3 tmpvar_15;
-				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = ((_LightColor0.xyz * (
-					(mix(tmpvar_10.xxx, mix(mix(vec3(
-						clamp((tmpvar_10.x + ((1.0 - tmpvar_10.y) * (tmpvar_10.x * tmpvar_10.x))), 0.0, 1.0)
-						), xlv_COLOR0.xyz, tmpvar_10.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * max(0.0, dot(tmpvar_15, tmpvar_3)))
-					+
-					(pow(max(0.0, dot(tmpvar_15,
-						normalize((normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4)) + tmpvar_3))
-						)), (_Shininess * 128.0)) * ((pow(
-							((1.0 - tmpvar_10.y) + 0.4)
-							, 3.0) + 0.2) * tmpvar_10.y))
-					)) * texture2D (_LightTexture0, vec2(dot(tmpvar_13, tmpvar_13))).w);
-				c_14.w = 1.0;
-				c_2.xyz = c_14.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "d3d9 " {
-			// Stats: 35 math
-			Keywords{ "POINT" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				Matrix 4[_Object2World] 3
-				Matrix 7[_World2Object] 3
-				Matrix 0[glstate_matrix_mvp]
-				Vector 12[_Emissive_ST]
-				Vector 11[_MainTex_ST]
-				Vector 10[unity_WorldTransformParams]
-				"vs_3_0
-				dcl_position v0
-				dcl_tangent v1
-				dcl_normal v2
-				dcl_texcoord v3
-				dcl_texcoord1 v4
-				dcl_color v5
-				dcl_position o0
-				dcl_texcoord o1
-				dcl_texcoord1 o2.xyz
-				dcl_texcoord2 o3.xyz
-				dcl_texcoord3 o4.xyz
-				dcl_texcoord4 o5.xyz
-				dcl_color o6
-				dp4 o0.x, c0, v0
-				dp4 o0.y, c1, v0
-				dp4 o0.z, c2, v0
-				dp4 o0.w, c3, v0
-				mad o1.xy, v3, c11, c11.zwzw
-				mad o1.zw, v4.xyxy, c12.xyxy, c12
-				dp4 o5.x, c4, v0
-				dp4 o5.y, c5, v0
-				dp4 o5.z, c6, v0
-				dp3 r0.z, c4, v1
-				dp3 r0.x, c5, v1
-				dp3 r0.y, c6, v1
-				dp3 r0.w, r0, r0
-				rsq r0.w, r0.w
-				mul r0.xyz, r0.w, r0
-				mov o2.x, r0.z
-				mul r1.xyz, c8.zxyw, v2.y
-				mad r1.xyz, c7.zxyw, v2.x, r1
-				mad r1.xyz, c9.zxyw, v2.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul r1.xyz, r0.w, r1
-				mul r2.xyz, r0, r1
-				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
-				mul r0.z, c10.w, v1.w
-				mul r2.xyz, r0.z, r2
-				mov o2.y, r2.x
-				mov o2.z, r1.y
-				mov o3.x, r0.x
-				mov o4.x, r0.y
-				mov o3.y, r2.y
-				mov o4.y, r2.z
-				mov o3.z, r1.z
-				mov o4.z, r1.x
-				mov o6, v5
-
-				"
-		}
-		SubProgram "d3d11 " {
-			// Stats: 34 math
-			Keywords{ "POINT" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 272
-				Vector 240[_MainTex_ST]
-				Vector 256[_Emissive_ST]
-				ConstBuffer "UnityPerDraw" 352
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 192[_Object2World]
-				Matrix 256[_World2Object]
-				Vector 336[unity_WorldTransformParams]
-				BindCB  "$Globals" 0
-				BindCB  "UnityPerDraw" 1
-				"vs_4_0
-				root12:aaacaaaa
-				eefiecedhaomgnoeigpocikojcffdbiamlplojojabaaaaaaaeaiaaaaadaaaaaa
-				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
-				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
-				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
-				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
-				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
-				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
-				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
-				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
-				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
-				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
-				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
-				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
-				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
-				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
-				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaa
-				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
-				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
-				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
-				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
-				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
-				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
-				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
-				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
-				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
-				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
-				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
-				aaaaaaaaapaaaaaaogikcaaaaaaaaaaaapaaaaaadcaaaaalmccabaaaabaaaaaa
-				agbebaaaaeaaaaaaagiecaaaaaaaaaaabaaaaaaakgiocaaaaaaaaaaabaaaaaaa
-				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
-				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
-				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
-				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
-				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
-				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
-				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
-				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
-				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
-				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
-				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
-				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
-				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
-				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
-				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
-				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
-				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
-				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
-				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
-				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
-				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
-				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
-				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
-				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
-				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
-				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
-				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
-				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
-				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
-				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
-				doaaaaab"
-		}
-		SubProgram "gles " {
-			// Stats: 46 math, 3 textures
-			Keywords{ "POINT" }
-				"!!GLES
-				#version 100
-
-#ifdef VERTEX
-				attribute vec4 _glesTANGENT;
-			attribute vec4 _glesVertex;
-			attribute vec4 _glesColor;
-			attribute vec3 _glesNormal;
-			attribute vec4 _glesMultiTexCoord0;
-			attribute vec4 _glesMultiTexCoord1;
-			uniform highp mat4 glstate_matrix_mvp;
-			uniform highp mat4 _Object2World;
-			uniform highp mat4 _World2Object;
-			uniform highp vec4 unity_WorldTransformParams;
-			uniform highp vec4 _MainTex_ST;
-			uniform highp vec4 _Emissive_ST;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp float tangentSign_1;
-				lowp vec3 worldTangent_2;
-				lowp vec3 worldNormal_3;
-				highp vec4 tmpvar_4;
-				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				highp vec4 v_5;
-				v_5.x = _World2Object[0].x;
-				v_5.y = _World2Object[1].x;
-				v_5.z = _World2Object[2].x;
-				v_5.w = _World2Object[3].x;
-				highp vec4 v_6;
-				v_6.x = _World2Object[0].y;
-				v_6.y = _World2Object[1].y;
-				v_6.z = _World2Object[2].y;
-				v_6.w = _World2Object[3].y;
-				highp vec4 v_7;
-				v_7.x = _World2Object[0].z;
-				v_7.y = _World2Object[1].z;
-				v_7.z = _World2Object[2].z;
-				v_7.w = _World2Object[3].z;
-				highp vec3 tmpvar_8;
-				tmpvar_8 = normalize(((
-					(v_5.xyz * _glesNormal.x)
-					+
-					(v_6.xyz * _glesNormal.y)
-					) + (v_7.xyz * _glesNormal.z)));
-				worldNormal_3 = tmpvar_8;
-				highp mat3 tmpvar_9;
-				tmpvar_9[0] = _Object2World[0].xyz;
-				tmpvar_9[1] = _Object2World[1].xyz;
-				tmpvar_9[2] = _Object2World[2].xyz;
-				highp vec3 tmpvar_10;
-				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
-				worldTangent_2 = tmpvar_10;
-				highp float tmpvar_11;
-				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
-				tangentSign_1 = tmpvar_11;
-				lowp vec3 tmpvar_12;
-				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
-				lowp vec3 tmpvar_13;
-				tmpvar_13.x = worldTangent_2.x;
-				tmpvar_13.y = tmpvar_12.x;
-				tmpvar_13.z = worldNormal_3.x;
-				lowp vec3 tmpvar_14;
-				tmpvar_14.x = worldTangent_2.y;
-				tmpvar_14.y = tmpvar_12.y;
-				tmpvar_14.z = worldNormal_3.y;
-				lowp vec3 tmpvar_15;
-				tmpvar_15.x = worldTangent_2.z;
-				tmpvar_15.y = tmpvar_12.z;
-				tmpvar_15.z = worldNormal_3.z;
-				gl_Position = (glstate_matrix_mvp * _glesVertex);
-				xlv_TEXCOORD0 = tmpvar_4;
-				xlv_TEXCOORD1 = tmpvar_13;
-				xlv_TEXCOORD2 = tmpvar_14;
-				xlv_TEXCOORD3 = tmpvar_15;
-				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
-				xlv_COLOR0 = _glesColor;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform highp vec3 _WorldSpaceCameraPos;
-			uniform highp vec4 _WorldSpaceLightPos0;
-			uniform lowp vec4 _LightColor0;
-			uniform sampler2D _LightTexture0;
-			uniform mediump mat4 _LightMatrix0;
-			uniform mediump float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp vec3 worldN_1;
-				lowp vec4 c_2;
-				lowp vec3 worldViewDir_3;
-				lowp vec3 lightDir_4;
-				highp vec4 tmpvar_5;
-				highp vec3 tmpvar_6;
-				tmpvar_6 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				lightDir_4 = tmpvar_6;
-				highp vec3 tmpvar_7;
-				tmpvar_7 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
-				worldViewDir_3 = tmpvar_7;
-				lowp vec3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = xlv_COLOR0;
-				lowp vec3 tmpvar_9;
-				lowp float tmpvar_10;
-				highp vec4 mask_11;
-				highp vec4 color_12;
-				lowp vec4 tmpvar_13;
-				tmpvar_13 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_12 = tmpvar_13;
-				lowp vec4 tmpvar_14;
-				tmpvar_14 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_11 = tmpvar_14;
-				highp vec2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
-				highp vec2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
-				highp vec2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
-				highp vec2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				highp vec2 tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, vec2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, vec2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				highp vec3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(vec3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = tmpvar_21;
-				highp float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = ((tmpvar_22 + 0.2) * tmpvar_19.y);
-				highp vec4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = xlv_TEXCOORD4;
-				highp vec3 tmpvar_24;
-				tmpvar_24 = (_LightMatrix0 * tmpvar_23).xyz;
-				highp float tmpvar_25;
-				tmpvar_25 = dot(tmpvar_24, tmpvar_24);
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				lowp vec4 c_26;
-				lowp float spec_27;
-				lowp vec3 tmpvar_28;
-				tmpvar_28 = normalize(worldN_1);
-				lowp float tmpvar_29;
-				tmpvar_29 = max(0.0, dot(tmpvar_28, tmpvar_8));
-				mediump float tmpvar_30;
-				tmpvar_30 = (pow(tmpvar_29, (_Shininess * 128.0)) * tmpvar_10);
-				spec_27 = tmpvar_30;
-				c_26.xyz = ((_LightColor0.xyz * (
-					(tmpvar_9 * max(0.0, dot(tmpvar_28, lightDir_4)))
-					+ spec_27)) * texture2D (_LightTexture0, vec2(tmpvar_25)).w);
-				c_26.w = 1.0;
-				c_2.xyz = c_26.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "gles3 " {
-			Keywords{ "POINT" }
-				"!!GLES3
-#ifdef VERTEX
-				#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in highp vec4 in_POSITION0;
-			in highp vec4 in_TANGENT0;
-			in highp vec3 in_NORMAL0;
-			in highp vec4 in_TEXCOORD0;
-			in highp vec4 in_TEXCOORD1;
-			in lowp vec4 in_COLOR0;
-			out highp vec4 vs_TEXCOORD0;
-			out lowp vec3 vs_TEXCOORD1;
-			out lowp vec3 vs_TEXCOORD2;
-			out lowp vec3 vs_TEXCOORD3;
-			out highp vec3 vs_TEXCOORD4;
-			out lowp vec4 vs_COLOR0;
-			highp vec4 t0;
-			highp vec3 t1;
-			lowp vec3 t10_2;
-			highp float t3;
-			highp float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t10_2.xyz = t0.xyz * t1.xyz;
-				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t10_2.xyz = vec3(t3) * t10_2.xyz;
-				vs_TEXCOORD1.y = t10_2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t10_2.y;
-				vs_TEXCOORD3.y = t10_2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform lowp sampler2D _MainTex;
-			uniform lowp sampler2D _Emissive;
-			uniform lowp sampler2D _LightTexture0;
-			in highp vec4 vs_TEXCOORD0;
-			in lowp vec3 vs_TEXCOORD1;
-			in lowp vec3 vs_TEXCOORD2;
-			in lowp vec3 vs_TEXCOORD3;
-			in highp vec3 vs_TEXCOORD4;
-			in lowp vec4 vs_COLOR0;
-			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec2 t0;
-			mediump float t16_0;
-			lowp float t10_0;
-			highp vec4 t1;
-			highp vec4 t2;
-			lowp vec4 t10_3;
-			lowp vec3 t10_4;
-			lowp vec3 t10_5;
-			mediump vec3 t16_6;
-			highp vec3 t7;
-			mediump float t16_13;
-			highp vec2 t14;
-			mediump float t16_14;
-			highp float t22;
-			lowp float t10_25;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t14.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t14.xy = clamp(t14.xy, 0.0, 1.0);
-				t1.xy = t14.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t14.yy * t1.xy + t0.xy;
-				t14.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t14.x = t1.x * t14.x + t0.y;
-				t14.x = clamp(t14.x, 0.0, 1.0);
-				t1.xzw = (-t14.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t14.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t16_14 = vs_COLOR0.w;
-				t16_14 = clamp(t16_14, 0.0, 1.0);
-				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t22 = dot(t1.xyz, t1.xyz);
-				t22 = inversesqrt(t22);
-				t1.xyz = vec3(t22) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t22 = dot(t2.xyz, t2.xyz);
-				t22 = inversesqrt(t22);
-				t10_4.xyz = t2.xyz * vec3(t22) + t1.xyz;
-				t10_25 = dot(t10_4.xyz, t10_4.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
-				t10_5.x = vs_TEXCOORD1.z;
-				t10_5.y = vs_TEXCOORD2.z;
-				t10_5.z = vs_TEXCOORD3.z;
-				t10_25 = dot(t10_5.xyz, t10_5.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_5.xyz = vec3(t10_25) * t10_5.xyz;
-				t10_4.x = dot(t10_5.xyz, t10_4.xyz);
-				t10_4.y = dot(t10_5.xyz, t1.xyz);
-				t10_4.xy = max(t10_4.xy, vec2(0.0, 0.0));
-				t16_6.x = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6.x = t16_6.x * t16_13;
-				t16_6.x = exp2(t16_6.x);
-				t16_6.x = t0.x * t16_6.x;
-				t10_4.xyz = t7.xyz * t10_4.yyy + t16_6.xxx;
-				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
-				t16_6.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
-				t16_6.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t16_6.xyz;
-				t16_6.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t16_6.xyz;
-				t16_6.xyz = t16_6.xyz + _LightMatrix0[3].xyz;
-				t16_0 = dot(t16_6.xyz, t16_6.xyz);
-				t10_0 = texture(_LightTexture0, vec2(t16_0)).w;
-				SV_Target0.xyz = vec3(t10_0) * t10_4.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "metal " {
-			// Stats: 19 math
-			Keywords{ "POINT" }
-				Bind "tangent" ATTR0
-				Bind "vertex" ATTR1
-				Bind "color" ATTR2
-				Bind "normal" ATTR3
-				Bind "texcoord" ATTR4
-				Bind "texcoord1" ATTR5
-				ConstBuffer "$Globals" 240
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 64[_Object2World]
-				Matrix 128[_World2Object]
-				Vector 192[unity_WorldTransformParams]
-				Vector 208[_MainTex_ST]
-				Vector 224[_Emissive_ST]
-				"metal_vs
-#include <metal_stdlib>
-				using namespace metal;
-			struct xlatMtlShaderInput {
-				float4 _glesTANGENT[[attribute(0)]];
-				float4 _glesVertex[[attribute(1)]];
-				float4 _glesColor[[attribute(2)]];
-				float3 _glesNormal[[attribute(3)]];
-				float4 _glesMultiTexCoord0[[attribute(4)]];
-				float4 _glesMultiTexCoord1[[attribute(5)]];
-			};
-			struct xlatMtlShaderOutput {
-				float4 gl_Position[[position]];
-				float4 xlv_TEXCOORD0;
-				half3 xlv_TEXCOORD1;
-				half3 xlv_TEXCOORD2;
-				half3 xlv_TEXCOORD3;
-				float3 xlv_TEXCOORD4;
-				half4 xlv_COLOR0;
-			};
-			struct xlatMtlShaderUniform {
-				float4x4 glstate_matrix_mvp;
-				float4x4 _Object2World;
-				float4x4 _World2Object;
-				float4 unity_WorldTransformParams;
-				float4 _MainTex_ST;
-				float4 _Emissive_ST;
-			};
-			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
-			{
-				xlatMtlShaderOutput _mtl_o;
-				half4 tmpvar_1;
-				tmpvar_1 = half4(_mtl_i._glesColor);
-				half tangentSign_2;
-				half3 worldTangent_3;
-				half3 worldNormal_4;
-				float4 tmpvar_5;
-				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
-				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
-				float4 v_6;
-				v_6.x = _mtl_u._World2Object[0].x;
-				v_6.y = _mtl_u._World2Object[1].x;
-				v_6.z = _mtl_u._World2Object[2].x;
-				v_6.w = _mtl_u._World2Object[3].x;
-				float4 v_7;
-				v_7.x = _mtl_u._World2Object[0].y;
-				v_7.y = _mtl_u._World2Object[1].y;
-				v_7.z = _mtl_u._World2Object[2].y;
-				v_7.w = _mtl_u._World2Object[3].y;
-				float4 v_8;
-				v_8.x = _mtl_u._World2Object[0].z;
-				v_8.y = _mtl_u._World2Object[1].z;
-				v_8.z = _mtl_u._World2Object[2].z;
-				v_8.w = _mtl_u._World2Object[3].z;
-				float3 tmpvar_9;
-				tmpvar_9 = normalize(((
-					(v_6.xyz * _mtl_i._glesNormal.x)
-					+
-					(v_7.xyz * _mtl_i._glesNormal.y)
-					) + (v_8.xyz * _mtl_i._glesNormal.z)));
-				worldNormal_4 = half3(tmpvar_9);
-				float3x3 tmpvar_10;
-				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
-				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
-				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
-				float3 tmpvar_11;
-				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
-				worldTangent_3 = half3(tmpvar_11);
-				float tmpvar_12;
-				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
-				tangentSign_2 = half(tmpvar_12);
-				half3 tmpvar_13;
-				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
-				half3 tmpvar_14;
-				tmpvar_14.x = worldTangent_3.x;
-				tmpvar_14.y = tmpvar_13.x;
-				tmpvar_14.z = worldNormal_4.x;
-				half3 tmpvar_15;
-				tmpvar_15.x = worldTangent_3.y;
-				tmpvar_15.y = tmpvar_13.y;
-				tmpvar_15.z = worldNormal_4.y;
-				half3 tmpvar_16;
-				tmpvar_16.x = worldTangent_3.z;
-				tmpvar_16.y = tmpvar_13.z;
-				tmpvar_16.z = worldNormal_4.z;
-				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
-				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
-				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
-				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
-				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
-				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
-				_mtl_o.xlv_COLOR0 = tmpvar_1;
-				return _mtl_o;
-			}
-
-			"
-		}
-		SubProgram "glcore " {
-			Keywords{ "POINT" }
-				"!!GL3x
-#ifdef VERTEX
-				#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in  vec4 in_POSITION0;
-			in  vec4 in_TANGENT0;
-			in  vec3 in_NORMAL0;
-			in  vec4 in_TEXCOORD0;
-			in  vec4 in_TEXCOORD1;
-			in  vec4 in_COLOR0;
-			out vec4 vs_TEXCOORD0;
-			out vec3 vs_TEXCOORD1;
-			out vec3 vs_TEXCOORD2;
-			out vec3 vs_TEXCOORD3;
-			out vec3 vs_TEXCOORD4;
-			out vec4 vs_COLOR0;
-			vec4 t0;
-			vec3 t1;
-			vec3 t2;
-			float t3;
-			float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t2.xyz = t0.xyz * t1.xyz;
-				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t2.xyz = vec3(t3) * t2.xyz;
-				vs_TEXCOORD1.y = t2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t2.y;
-				vs_TEXCOORD3.y = t2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform  sampler2D _MainTex;
-			uniform  sampler2D _Emissive;
-			uniform  sampler2D _LightTexture0;
-			in  vec4 vs_TEXCOORD0;
-			in  vec3 vs_TEXCOORD1;
-			in  vec3 vs_TEXCOORD2;
-			in  vec3 vs_TEXCOORD3;
-			in  vec3 vs_TEXCOORD4;
-			in  vec4 vs_COLOR0;
-			out vec4 SV_Target0;
-			vec3 t0;
-			vec4 t1;
-			lowp vec4 t10_1;
-			vec4 t2;
-			vec3 t3;
-			lowp vec4 t10_3;
-			vec3 t4;
-			float t5;
-			vec2 t8;
-			float t9;
-			float t12;
-			float t13;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = vec3(t13) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = vec3(t13) * t2.xyz;
-				t3.x = vs_TEXCOORD1.z;
-				t3.y = vs_TEXCOORD2.z;
-				t3.z = vs_TEXCOORD3.z;
-				t13 = dot(t3.xyz, t3.xyz);
-				t13 = inversesqrt(t13);
-				t3.xyz = vec3(t13) * t3.xyz;
-				t1.w = dot(t3.xyz, t2.xyz);
-				t1.x = dot(t3.xyz, t1.xyz);
-				t1.xy = max(t1.xw, vec2(0.0, 0.0));
-				t5 = log2(t1.y);
-				t9 = _Shininess * 128.0;
-				t5 = t5 * t9;
-				t5 = exp2(t5);
-				t0.x = t0.x * t5;
-				t0.xyz = t4.xyz * t1.xxx + t0.xxx;
-				t0.xyz = t0.xyz * _LightColor0.xyz;
-				t1.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
-				t1.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t1.xyz;
-				t1.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t1.xyz;
-				t1.xyz = t1.xyz + _LightMatrix0[3].xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t10_1 = texture(_LightTexture0, vec2(t12));
-				SV_Target0.xyz = t0.xyz * t10_1.www;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "opengl " {
-			// Stats: 40 math, 2 textures
-			Keywords{ "DIRECTIONAL" }
-				"!!GLSL#version 120
-
-#ifdef VERTEX
-
-				uniform mat4 _Object2World;
-			uniform mat4 _World2Object;
-			uniform vec4 unity_WorldTransformParams;
-			uniform vec4 _MainTex_ST;
-			uniform vec4 _Emissive_ST;
-			attribute vec4 TANGENT;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec4 tmpvar_1;
-				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				vec4 v_2;
-				v_2.x = _World2Object[0].x;
-				v_2.y = _World2Object[1].x;
-				v_2.z = _World2Object[2].x;
-				v_2.w = _World2Object[3].x;
-				vec4 v_3;
-				v_3.x = _World2Object[0].y;
-				v_3.y = _World2Object[1].y;
-				v_3.z = _World2Object[2].y;
-				v_3.w = _World2Object[3].y;
-				vec4 v_4;
-				v_4.x = _World2Object[0].z;
-				v_4.y = _World2Object[1].z;
-				v_4.z = _World2Object[2].z;
-				v_4.w = _World2Object[3].z;
-				vec3 tmpvar_5;
-				tmpvar_5 = normalize(((
-					(v_2.xyz * gl_Normal.x)
-					+
-					(v_3.xyz * gl_Normal.y)
-					) + (v_4.xyz * gl_Normal.z)));
-				mat3 tmpvar_6;
-				tmpvar_6[0] = _Object2World[0].xyz;
-				tmpvar_6[1] = _Object2World[1].xyz;
-				tmpvar_6[2] = _Object2World[2].xyz;
-				vec3 tmpvar_7;
-				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
-				vec3 tmpvar_8;
-				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
-				vec3 tmpvar_9;
-				tmpvar_9.x = tmpvar_7.x;
-				tmpvar_9.y = tmpvar_8.x;
-				tmpvar_9.z = tmpvar_5.x;
-				vec3 tmpvar_10;
-				tmpvar_10.x = tmpvar_7.y;
-				tmpvar_10.y = tmpvar_8.y;
-				tmpvar_10.z = tmpvar_5.y;
-				vec3 tmpvar_11;
-				tmpvar_11.x = tmpvar_7.z;
-				tmpvar_11.y = tmpvar_8.z;
-				tmpvar_11.z = tmpvar_5.z;
-				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
-				xlv_TEXCOORD0 = tmpvar_1;
-				xlv_TEXCOORD1 = tmpvar_9;
-				xlv_TEXCOORD2 = tmpvar_10;
-				xlv_TEXCOORD3 = tmpvar_11;
-				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
-				xlv_COLOR0 = gl_Color;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform vec3 _WorldSpaceCameraPos;
-			uniform vec4 _WorldSpaceLightPos0;
-			uniform vec4 _LightColor0;
-			uniform float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec3 worldN_1;
-				vec4 c_2;
-				vec4 tmpvar_3;
-				tmpvar_3 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				vec4 tmpvar_4;
-				tmpvar_4 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_5;
-				tmpvar_5.x = tmpvar_3.x;
-				tmpvar_5.y = tmpvar_4.x;
-				vec2 tmpvar_6;
-				tmpvar_6.x = tmpvar_3.y;
-				tmpvar_6.y = tmpvar_4.y;
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_3.z;
-				tmpvar_7.y = tmpvar_4.z;
-				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_3.w;
-				tmpvar_8.y = tmpvar_4.w;
-				vec2 tmpvar_9;
-				float tmpvar_10;
-				tmpvar_10 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_9 = mix(mix(tmpvar_5, tmpvar_6, vec2(clamp(tmpvar_10, 0.0, 1.0))), mix(tmpvar_7, tmpvar_8, vec2(clamp(
-					(tmpvar_10 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_10 - 1.0), 0.0, 1.0)));
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				vec4 c_11;
-				vec3 tmpvar_12;
-				tmpvar_12 = normalize(worldN_1);
-				c_11.xyz = (_LightColor0.xyz * ((
-					mix(tmpvar_9.xxx, mix(mix(vec3(clamp(
-						(tmpvar_9.x + ((1.0 - tmpvar_9.y) * (tmpvar_9.x * tmpvar_9.x)))
-						, 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_9.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0)))
-					*
-					max(0.0, dot(tmpvar_12, _WorldSpaceLightPos0.xyz))
-					) + (
-						pow(max(0.0, dot(tmpvar_12, normalize(
-							(normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4)) + _WorldSpaceLightPos0.xyz)
-							))), (_Shininess * 128.0))
-						*
-						((pow((
-							(1.0 - tmpvar_9.y)
-							+ 0.4), 3.0) + 0.2) * tmpvar_9.y)
-						)));
-				c_11.w = 1.0;
-				c_2.xyz = c_11.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "d3d9 " {
-			// Stats: 35 math
-			Keywords{ "DIRECTIONAL" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				Matrix 4[_Object2World] 3
-				Matrix 7[_World2Object] 3
-				Matrix 0[glstate_matrix_mvp]
-				Vector 12[_Emissive_ST]
-				Vector 11[_MainTex_ST]
-				Vector 10[unity_WorldTransformParams]
-				"vs_3_0
-				dcl_position v0
-				dcl_tangent v1
-				dcl_normal v2
-				dcl_texcoord v3
-				dcl_texcoord1 v4
-				dcl_color v5
-				dcl_position o0
-				dcl_texcoord o1
-				dcl_texcoord1 o2.xyz
-				dcl_texcoord2 o3.xyz
-				dcl_texcoord3 o4.xyz
-				dcl_texcoord4 o5.xyz
-				dcl_color o6
-				dp4 o0.x, c0, v0
-				dp4 o0.y, c1, v0
-				dp4 o0.z, c2, v0
-				dp4 o0.w, c3, v0
-				mad o1.xy, v3, c11, c11.zwzw
-				mad o1.zw, v4.xyxy, c12.xyxy, c12
-				dp4 o5.x, c4, v0
-				dp4 o5.y, c5, v0
-				dp4 o5.z, c6, v0
-				dp3 r0.z, c4, v1
-				dp3 r0.x, c5, v1
-				dp3 r0.y, c6, v1
-				dp3 r0.w, r0, r0
-				rsq r0.w, r0.w
-				mul r0.xyz, r0.w, r0
-				mov o2.x, r0.z
-				mul r1.xyz, c8.zxyw, v2.y
-				mad r1.xyz, c7.zxyw, v2.x, r1
-				mad r1.xyz, c9.zxyw, v2.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul r1.xyz, r0.w, r1
-				mul r2.xyz, r0, r1
-				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
-				mul r0.z, c10.w, v1.w
-				mul r2.xyz, r0.z, r2
-				mov o2.y, r2.x
-				mov o2.z, r1.y
-				mov o3.x, r0.x
-				mov o4.x, r0.y
-				mov o3.y, r2.y
-				mov o4.y, r2.z
-				mov o3.z, r1.z
-				mov o4.z, r1.x
-				mov o6, v5
-
-				"
-		}
-		SubProgram "d3d11 " {
-			// Stats: 34 math
-			Keywords{ "DIRECTIONAL" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 208
-				Vector 176[_MainTex_ST]
-				Vector 192[_Emissive_ST]
-				ConstBuffer "UnityPerDraw" 352
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 192[_Object2World]
-				Matrix 256[_World2Object]
-				Vector 336[unity_WorldTransformParams]
-				BindCB  "$Globals" 0
-				BindCB  "UnityPerDraw" 1
-				"vs_4_0
-				root12:aaacaaaa
-				eefiecednjiahabaadnlcpbmgoieijojopdjlplcabaaaaaaaeaiaaaaadaaaaaa
-				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
-				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
-				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
-				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
-				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
-				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
-				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
-				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
-				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
-				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
-				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
-				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
-				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
-				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
-				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaaanaaaaaafjaaaaaeegiocaaa
-				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
-				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
-				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
-				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
-				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
-				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
-				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
-				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
-				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
-				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
-				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
-				aaaaaaaaalaaaaaaogikcaaaaaaaaaaaalaaaaaadcaaaaalmccabaaaabaaaaaa
-				agbebaaaaeaaaaaaagiecaaaaaaaaaaaamaaaaaakgiocaaaaaaaaaaaamaaaaaa
-				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
-				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
-				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
-				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
-				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
-				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
-				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
-				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
-				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
-				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
-				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
-				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
-				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
-				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
-				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
-				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
-				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
-				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
-				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
-				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
-				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
-				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
-				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
-				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
-				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
-				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
-				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
-				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
-				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
-				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
-				doaaaaab"
-		}
-		SubProgram "gles " {
-			// Stats: 40 math, 2 textures
-			Keywords{ "DIRECTIONAL" }
-				"!!GLES
-				#version 100
-
-#ifdef VERTEX
-				attribute vec4 _glesTANGENT;
-			attribute vec4 _glesVertex;
-			attribute vec4 _glesColor;
-			attribute vec3 _glesNormal;
-			attribute vec4 _glesMultiTexCoord0;
-			attribute vec4 _glesMultiTexCoord1;
-			uniform highp mat4 glstate_matrix_mvp;
-			uniform highp mat4 _Object2World;
-			uniform highp mat4 _World2Object;
-			uniform highp vec4 unity_WorldTransformParams;
-			uniform highp vec4 _MainTex_ST;
-			uniform highp vec4 _Emissive_ST;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp float tangentSign_1;
-				lowp vec3 worldTangent_2;
-				lowp vec3 worldNormal_3;
-				highp vec4 tmpvar_4;
-				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				highp vec4 v_5;
-				v_5.x = _World2Object[0].x;
-				v_5.y = _World2Object[1].x;
-				v_5.z = _World2Object[2].x;
-				v_5.w = _World2Object[3].x;
-				highp vec4 v_6;
-				v_6.x = _World2Object[0].y;
-				v_6.y = _World2Object[1].y;
-				v_6.z = _World2Object[2].y;
-				v_6.w = _World2Object[3].y;
-				highp vec4 v_7;
-				v_7.x = _World2Object[0].z;
-				v_7.y = _World2Object[1].z;
-				v_7.z = _World2Object[2].z;
-				v_7.w = _World2Object[3].z;
-				highp vec3 tmpvar_8;
-				tmpvar_8 = normalize(((
-					(v_5.xyz * _glesNormal.x)
-					+
-					(v_6.xyz * _glesNormal.y)
-					) + (v_7.xyz * _glesNormal.z)));
-				worldNormal_3 = tmpvar_8;
-				highp mat3 tmpvar_9;
-				tmpvar_9[0] = _Object2World[0].xyz;
-				tmpvar_9[1] = _Object2World[1].xyz;
-				tmpvar_9[2] = _Object2World[2].xyz;
-				highp vec3 tmpvar_10;
-				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
-				worldTangent_2 = tmpvar_10;
-				highp float tmpvar_11;
-				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
-				tangentSign_1 = tmpvar_11;
-				lowp vec3 tmpvar_12;
-				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
-				lowp vec3 tmpvar_13;
-				tmpvar_13.x = worldTangent_2.x;
-				tmpvar_13.y = tmpvar_12.x;
-				tmpvar_13.z = worldNormal_3.x;
-				lowp vec3 tmpvar_14;
-				tmpvar_14.x = worldTangent_2.y;
-				tmpvar_14.y = tmpvar_12.y;
-				tmpvar_14.z = worldNormal_3.y;
-				lowp vec3 tmpvar_15;
-				tmpvar_15.x = worldTangent_2.z;
-				tmpvar_15.y = tmpvar_12.z;
-				tmpvar_15.z = worldNormal_3.z;
-				gl_Position = (glstate_matrix_mvp * _glesVertex);
-				xlv_TEXCOORD0 = tmpvar_4;
-				xlv_TEXCOORD1 = tmpvar_13;
-				xlv_TEXCOORD2 = tmpvar_14;
-				xlv_TEXCOORD3 = tmpvar_15;
-				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
-				xlv_COLOR0 = _glesColor;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform highp vec3 _WorldSpaceCameraPos;
-			uniform mediump vec4 _WorldSpaceLightPos0;
-			uniform lowp vec4 _LightColor0;
-			uniform mediump float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp vec3 worldN_1;
-				lowp vec4 c_2;
-				lowp vec3 worldViewDir_3;
-				lowp vec3 lightDir_4;
-				highp vec4 tmpvar_5;
-				mediump vec3 tmpvar_6;
-				tmpvar_6 = _WorldSpaceLightPos0.xyz;
-				lightDir_4 = tmpvar_6;
-				highp vec3 tmpvar_7;
-				tmpvar_7 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
-				worldViewDir_3 = tmpvar_7;
-				lowp vec3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = xlv_COLOR0;
-				lowp vec3 tmpvar_9;
-				lowp float tmpvar_10;
-				highp vec4 mask_11;
-				highp vec4 color_12;
-				lowp vec4 tmpvar_13;
-				tmpvar_13 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_12 = tmpvar_13;
-				lowp vec4 tmpvar_14;
-				tmpvar_14 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_11 = tmpvar_14;
-				highp vec2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
-				highp vec2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
-				highp vec2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
-				highp vec2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				highp vec2 tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, vec2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, vec2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				highp vec3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(vec3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = tmpvar_21;
-				highp float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = ((tmpvar_22 + 0.2) * tmpvar_19.y);
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				lowp vec4 c_23;
-				lowp float spec_24;
-				lowp vec3 tmpvar_25;
-				tmpvar_25 = normalize(worldN_1);
-				lowp float tmpvar_26;
-				tmpvar_26 = max(0.0, dot(tmpvar_25, tmpvar_8));
-				mediump float tmpvar_27;
-				tmpvar_27 = (pow(tmpvar_26, (_Shininess * 128.0)) * tmpvar_10);
-				spec_24 = tmpvar_27;
-				c_23.xyz = (_LightColor0.xyz * ((tmpvar_9 *
-					max(0.0, dot(tmpvar_25, lightDir_4))
-					) + spec_24));
-				c_23.w = 1.0;
-				c_2.xyz = c_23.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "gles3 " {
-			Keywords{ "DIRECTIONAL" }
-				"!!GLES3
-#ifdef VERTEX
-				#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	mediump vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in highp vec4 in_POSITION0;
-			in highp vec4 in_TANGENT0;
-			in highp vec3 in_NORMAL0;
-			in highp vec4 in_TEXCOORD0;
-			in highp vec4 in_TEXCOORD1;
-			in lowp vec4 in_COLOR0;
-			out highp vec4 vs_TEXCOORD0;
-			out lowp vec3 vs_TEXCOORD1;
-			out lowp vec3 vs_TEXCOORD2;
-			out lowp vec3 vs_TEXCOORD3;
-			out highp vec3 vs_TEXCOORD4;
-			out lowp vec4 vs_COLOR0;
-			highp vec4 t0;
-			highp vec3 t1;
-			lowp vec3 t10_2;
-			highp float t3;
-			highp float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t10_2.xyz = t0.xyz * t1.xyz;
-				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t10_2.xyz = vec3(t3) * t10_2.xyz;
-				vs_TEXCOORD1.y = t10_2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t10_2.y;
-				vs_TEXCOORD3.y = t10_2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	mediump vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform lowp sampler2D _MainTex;
-			uniform lowp sampler2D _Emissive;
-			in highp vec4 vs_TEXCOORD0;
-			in lowp vec3 vs_TEXCOORD1;
-			in lowp vec3 vs_TEXCOORD2;
-			in lowp vec3 vs_TEXCOORD3;
-			in highp vec3 vs_TEXCOORD4;
-			in lowp vec4 vs_COLOR0;
-			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec2 t0;
-			highp vec4 t1;
-			highp vec4 t2;
-			lowp vec4 t10_3;
-			lowp vec3 t10_4;
-			lowp vec3 t10_5;
-			mediump float t16_6;
-			highp vec3 t7;
-			mediump float t16_13;
-			highp vec2 t14;
-			mediump float t16_14;
-			highp float t22;
-			lowp float t10_25;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t14.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t14.xy = clamp(t14.xy, 0.0, 1.0);
-				t1.xy = t14.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t14.yy * t1.xy + t0.xy;
-				t14.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t14.x = t1.x * t14.x + t0.y;
-				t14.x = clamp(t14.x, 0.0, 1.0);
-				t1.xzw = (-t14.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t14.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t16_14 = vs_COLOR0.w;
-				t16_14 = clamp(t16_14, 0.0, 1.0);
-				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t22 = dot(t1.xyz, t1.xyz);
-				t22 = inversesqrt(t22);
-				t10_4.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_25 = dot(t10_4.xyz, t10_4.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
-				t10_5.x = vs_TEXCOORD1.z;
-				t10_5.y = vs_TEXCOORD2.z;
-				t10_5.z = vs_TEXCOORD3.z;
-				t10_25 = dot(t10_5.xyz, t10_5.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_5.xyz = vec3(t10_25) * t10_5.xyz;
-				t10_4.x = dot(t10_5.xyz, t10_4.xyz);
-				t10_4.y = dot(t10_5.xyz, _WorldSpaceLightPos0.xyz);
-				t10_4.xy = max(t10_4.xy, vec2(0.0, 0.0));
-				t16_6 = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6 = t16_6 * t16_13;
-				t16_6 = exp2(t16_6);
-				t16_6 = t0.x * t16_6;
-				t10_4.xyz = t7.xyz * t10_4.yyy + vec3(t16_6);
-				SV_Target0.xyz = t10_4.xyz * _LightColor0.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "metal " {
-			// Stats: 19 math
-			Keywords{ "DIRECTIONAL" }
-				Bind "tangent" ATTR0
-				Bind "vertex" ATTR1
-				Bind "color" ATTR2
-				Bind "normal" ATTR3
-				Bind "texcoord" ATTR4
-				Bind "texcoord1" ATTR5
-				ConstBuffer "$Globals" 240
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 64[_Object2World]
-				Matrix 128[_World2Object]
-				Vector 192[unity_WorldTransformParams]
-				Vector 208[_MainTex_ST]
-				Vector 224[_Emissive_ST]
-				"metal_vs
-#include <metal_stdlib>
-				using namespace metal;
-			struct xlatMtlShaderInput {
-				float4 _glesTANGENT[[attribute(0)]];
-				float4 _glesVertex[[attribute(1)]];
-				float4 _glesColor[[attribute(2)]];
-				float3 _glesNormal[[attribute(3)]];
-				float4 _glesMultiTexCoord0[[attribute(4)]];
-				float4 _glesMultiTexCoord1[[attribute(5)]];
-			};
-			struct xlatMtlShaderOutput {
-				float4 gl_Position[[position]];
-				float4 xlv_TEXCOORD0;
-				half3 xlv_TEXCOORD1;
-				half3 xlv_TEXCOORD2;
-				half3 xlv_TEXCOORD3;
-				float3 xlv_TEXCOORD4;
-				half4 xlv_COLOR0;
-			};
-			struct xlatMtlShaderUniform {
-				float4x4 glstate_matrix_mvp;
-				float4x4 _Object2World;
-				float4x4 _World2Object;
-				float4 unity_WorldTransformParams;
-				float4 _MainTex_ST;
-				float4 _Emissive_ST;
-			};
-			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
-			{
-				xlatMtlShaderOutput _mtl_o;
-				half4 tmpvar_1;
-				tmpvar_1 = half4(_mtl_i._glesColor);
-				half tangentSign_2;
-				half3 worldTangent_3;
-				half3 worldNormal_4;
-				float4 tmpvar_5;
-				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
-				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
-				float4 v_6;
-				v_6.x = _mtl_u._World2Object[0].x;
-				v_6.y = _mtl_u._World2Object[1].x;
-				v_6.z = _mtl_u._World2Object[2].x;
-				v_6.w = _mtl_u._World2Object[3].x;
-				float4 v_7;
-				v_7.x = _mtl_u._World2Object[0].y;
-				v_7.y = _mtl_u._World2Object[1].y;
-				v_7.z = _mtl_u._World2Object[2].y;
-				v_7.w = _mtl_u._World2Object[3].y;
-				float4 v_8;
-				v_8.x = _mtl_u._World2Object[0].z;
-				v_8.y = _mtl_u._World2Object[1].z;
-				v_8.z = _mtl_u._World2Object[2].z;
-				v_8.w = _mtl_u._World2Object[3].z;
-				float3 tmpvar_9;
-				tmpvar_9 = normalize(((
-					(v_6.xyz * _mtl_i._glesNormal.x)
-					+
-					(v_7.xyz * _mtl_i._glesNormal.y)
-					) + (v_8.xyz * _mtl_i._glesNormal.z)));
-				worldNormal_4 = half3(tmpvar_9);
-				float3x3 tmpvar_10;
-				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
-				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
-				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
-				float3 tmpvar_11;
-				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
-				worldTangent_3 = half3(tmpvar_11);
-				float tmpvar_12;
-				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
-				tangentSign_2 = half(tmpvar_12);
-				half3 tmpvar_13;
-				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
-				half3 tmpvar_14;
-				tmpvar_14.x = worldTangent_3.x;
-				tmpvar_14.y = tmpvar_13.x;
-				tmpvar_14.z = worldNormal_4.x;
-				half3 tmpvar_15;
-				tmpvar_15.x = worldTangent_3.y;
-				tmpvar_15.y = tmpvar_13.y;
-				tmpvar_15.z = worldNormal_4.y;
-				half3 tmpvar_16;
-				tmpvar_16.x = worldTangent_3.z;
-				tmpvar_16.y = tmpvar_13.z;
-				tmpvar_16.z = worldNormal_4.z;
-				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
-				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
-				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
-				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
-				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
-				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
-				_mtl_o.xlv_COLOR0 = tmpvar_1;
-				return _mtl_o;
-			}
-
-			"
-		}
-		SubProgram "glcore " {
-			Keywords{ "DIRECTIONAL" }
-				"!!GL3x
-#ifdef VERTEX
-				#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in  vec4 in_POSITION0;
-			in  vec4 in_TANGENT0;
-			in  vec3 in_NORMAL0;
-			in  vec4 in_TEXCOORD0;
-			in  vec4 in_TEXCOORD1;
-			in  vec4 in_COLOR0;
-			out vec4 vs_TEXCOORD0;
-			out vec3 vs_TEXCOORD1;
-			out vec3 vs_TEXCOORD2;
-			out vec3 vs_TEXCOORD3;
-			out vec3 vs_TEXCOORD4;
-			out vec4 vs_COLOR0;
-			vec4 t0;
-			vec3 t1;
-			vec3 t2;
-			float t3;
-			float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t2.xyz = t0.xyz * t1.xyz;
-				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t2.xyz = vec3(t3) * t2.xyz;
-				vs_TEXCOORD1.y = t2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t2.y;
-				vs_TEXCOORD3.y = t2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform  sampler2D _MainTex;
-			uniform  sampler2D _Emissive;
-			in  vec4 vs_TEXCOORD0;
-			in  vec3 vs_TEXCOORD1;
-			in  vec3 vs_TEXCOORD2;
-			in  vec3 vs_TEXCOORD3;
-			in  vec3 vs_TEXCOORD4;
-			in  vec4 vs_COLOR0;
-			out vec4 SV_Target0;
-			vec3 t0;
-			vec4 t1;
-			vec4 t2;
-			lowp vec4 t10_3;
-			vec3 t4;
-			vec2 t8;
-			float t9;
-			float t13;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = t1.xyz * vec3(t13) + _WorldSpaceLightPos0.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = vec3(t13) * t1.xyz;
-				t2.x = vs_TEXCOORD1.z;
-				t2.y = vs_TEXCOORD2.z;
-				t2.z = vs_TEXCOORD3.z;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = vec3(t13) * t2.xyz;
-				t1.x = dot(t2.xyz, t1.xyz);
-				t1.y = dot(t2.xyz, _WorldSpaceLightPos0.xyz);
-				t1.xy = max(t1.xy, vec2(0.0, 0.0));
-				t1.x = log2(t1.x);
-				t9 = _Shininess * 128.0;
-				t1.x = t1.x * t9;
-				t1.x = exp2(t1.x);
-				t0.x = t0.x * t1.x;
-				t0.xyz = t4.xyz * t1.yyy + t0.xxx;
-				SV_Target0.xyz = t0.xyz * _LightColor0.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "opengl " {
-			// Stats: 52 math, 4 textures
-			Keywords{ "SPOT" }
-				"!!GLSL#version 120
-
-#ifdef VERTEX
-
-				uniform mat4 _Object2World;
-			uniform mat4 _World2Object;
-			uniform vec4 unity_WorldTransformParams;
-			uniform vec4 _MainTex_ST;
-			uniform vec4 _Emissive_ST;
-			attribute vec4 TANGENT;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec4 tmpvar_1;
-				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				vec4 v_2;
-				v_2.x = _World2Object[0].x;
-				v_2.y = _World2Object[1].x;
-				v_2.z = _World2Object[2].x;
-				v_2.w = _World2Object[3].x;
-				vec4 v_3;
-				v_3.x = _World2Object[0].y;
-				v_3.y = _World2Object[1].y;
-				v_3.z = _World2Object[2].y;
-				v_3.w = _World2Object[3].y;
-				vec4 v_4;
-				v_4.x = _World2Object[0].z;
-				v_4.y = _World2Object[1].z;
-				v_4.z = _World2Object[2].z;
-				v_4.w = _World2Object[3].z;
-				vec3 tmpvar_5;
-				tmpvar_5 = normalize(((
-					(v_2.xyz * gl_Normal.x)
-					+
-					(v_3.xyz * gl_Normal.y)
-					) + (v_4.xyz * gl_Normal.z)));
-				mat3 tmpvar_6;
-				tmpvar_6[0] = _Object2World[0].xyz;
-				tmpvar_6[1] = _Object2World[1].xyz;
-				tmpvar_6[2] = _Object2World[2].xyz;
-				vec3 tmpvar_7;
-				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
-				vec3 tmpvar_8;
-				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
-				vec3 tmpvar_9;
-				tmpvar_9.x = tmpvar_7.x;
-				tmpvar_9.y = tmpvar_8.x;
-				tmpvar_9.z = tmpvar_5.x;
-				vec3 tmpvar_10;
-				tmpvar_10.x = tmpvar_7.y;
-				tmpvar_10.y = tmpvar_8.y;
-				tmpvar_10.z = tmpvar_5.y;
-				vec3 tmpvar_11;
-				tmpvar_11.x = tmpvar_7.z;
-				tmpvar_11.y = tmpvar_8.z;
-				tmpvar_11.z = tmpvar_5.z;
-				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
-				xlv_TEXCOORD0 = tmpvar_1;
-				xlv_TEXCOORD1 = tmpvar_9;
-				xlv_TEXCOORD2 = tmpvar_10;
-				xlv_TEXCOORD3 = tmpvar_11;
-				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
-				xlv_COLOR0 = gl_Color;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform vec3 _WorldSpaceCameraPos;
-			uniform vec4 _WorldSpaceLightPos0;
-			uniform vec4 _LightColor0;
-			uniform sampler2D _LightTexture0;
-			uniform mat4 _LightMatrix0;
-			uniform sampler2D _LightTextureB0;
-			uniform float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec3 worldN_1;
-				vec4 c_2;
-				vec3 tmpvar_3;
-				tmpvar_3 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				vec4 tmpvar_4;
-				tmpvar_4 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_6;
-				tmpvar_6.x = tmpvar_4.x;
-				tmpvar_6.y = tmpvar_5.x;
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_4.y;
-				tmpvar_7.y = tmpvar_5.y;
-				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_4.z;
-				tmpvar_8.y = tmpvar_5.z;
-				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_4.w;
-				tmpvar_9.y = tmpvar_5.w;
-				vec2 tmpvar_10;
-				float tmpvar_11;
-				tmpvar_11 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_10 = mix(mix(tmpvar_6, tmpvar_7, vec2(clamp(tmpvar_11, 0.0, 1.0))), mix(tmpvar_8, tmpvar_9, vec2(clamp(
-					(tmpvar_11 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_11 - 1.0), 0.0, 1.0)));
-				vec4 tmpvar_12;
-				tmpvar_12.w = 1.0;
-				tmpvar_12.xyz = xlv_TEXCOORD4;
-				vec4 tmpvar_13;
-				tmpvar_13 = (_LightMatrix0 * tmpvar_12);
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				vec4 c_14;
-				vec3 tmpvar_15;
-				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = ((_LightColor0.xyz * (
-					(mix(tmpvar_10.xxx, mix(mix(vec3(
-						clamp((tmpvar_10.x + ((1.0 - tmpvar_10.y) * (tmpvar_10.x * tmpvar_10.x))), 0.0, 1.0)
-						), xlv_COLOR0.xyz, tmpvar_10.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * max(0.0, dot(tmpvar_15, tmpvar_3)))
-					+
-					(pow(max(0.0, dot(tmpvar_15,
-						normalize((normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4)) + tmpvar_3))
-						)), (_Shininess * 128.0)) * ((pow(
-							((1.0 - tmpvar_10.y) + 0.4)
-							, 3.0) + 0.2) * tmpvar_10.y))
-					)) * ((
-						float((tmpvar_13.z > 0.0))
-						* texture2D (_LightTexture0,
-							((tmpvar_13.xy / tmpvar_13.w) + 0.5)
-							).w) * texture2D (_LightTextureB0, vec2(dot(tmpvar_13.xyz, tmpvar_13.xyz))).w));
-				c_14.w = 1.0;
-				c_2.xyz = c_14.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "d3d9 " {
-			// Stats: 35 math
-			Keywords{ "SPOT" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				Matrix 4[_Object2World] 3
-				Matrix 7[_World2Object] 3
-				Matrix 0[glstate_matrix_mvp]
-				Vector 12[_Emissive_ST]
-				Vector 11[_MainTex_ST]
-				Vector 10[unity_WorldTransformParams]
-				"vs_3_0
-				dcl_position v0
-				dcl_tangent v1
-				dcl_normal v2
-				dcl_texcoord v3
-				dcl_texcoord1 v4
-				dcl_color v5
-				dcl_position o0
-				dcl_texcoord o1
-				dcl_texcoord1 o2.xyz
-				dcl_texcoord2 o3.xyz
-				dcl_texcoord3 o4.xyz
-				dcl_texcoord4 o5.xyz
-				dcl_color o6
-				dp4 o0.x, c0, v0
-				dp4 o0.y, c1, v0
-				dp4 o0.z, c2, v0
-				dp4 o0.w, c3, v0
-				mad o1.xy, v3, c11, c11.zwzw
-				mad o1.zw, v4.xyxy, c12.xyxy, c12
-				dp4 o5.x, c4, v0
-				dp4 o5.y, c5, v0
-				dp4 o5.z, c6, v0
-				dp3 r0.z, c4, v1
-				dp3 r0.x, c5, v1
-				dp3 r0.y, c6, v1
-				dp3 r0.w, r0, r0
-				rsq r0.w, r0.w
-				mul r0.xyz, r0.w, r0
-				mov o2.x, r0.z
-				mul r1.xyz, c8.zxyw, v2.y
-				mad r1.xyz, c7.zxyw, v2.x, r1
-				mad r1.xyz, c9.zxyw, v2.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul r1.xyz, r0.w, r1
-				mul r2.xyz, r0, r1
-				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
-				mul r0.z, c10.w, v1.w
-				mul r2.xyz, r0.z, r2
-				mov o2.y, r2.x
-				mov o2.z, r1.y
-				mov o3.x, r0.x
-				mov o4.x, r0.y
-				mov o3.y, r2.y
-				mov o4.y, r2.z
-				mov o3.z, r1.z
-				mov o4.z, r1.x
-				mov o6, v5
-
-				"
-		}
-		SubProgram "d3d11 " {
-			// Stats: 34 math
-			Keywords{ "SPOT" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 272
-				Vector 240[_MainTex_ST]
-				Vector 256[_Emissive_ST]
-				ConstBuffer "UnityPerDraw" 352
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 192[_Object2World]
-				Matrix 256[_World2Object]
-				Vector 336[unity_WorldTransformParams]
-				BindCB  "$Globals" 0
-				BindCB  "UnityPerDraw" 1
-				"vs_4_0
-				root12:aaacaaaa
-				eefiecedhaomgnoeigpocikojcffdbiamlplojojabaaaaaaaeaiaaaaadaaaaaa
-				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
-				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
-				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
-				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
-				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
-				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
-				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
-				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
-				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
-				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
-				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
-				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
-				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
-				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
-				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaa
-				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
-				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
-				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
-				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
-				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
-				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
-				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
-				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
-				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
-				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
-				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
-				aaaaaaaaapaaaaaaogikcaaaaaaaaaaaapaaaaaadcaaaaalmccabaaaabaaaaaa
-				agbebaaaaeaaaaaaagiecaaaaaaaaaaabaaaaaaakgiocaaaaaaaaaaabaaaaaaa
-				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
-				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
-				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
-				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
-				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
-				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
-				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
-				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
-				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
-				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
-				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
-				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
-				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
-				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
-				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
-				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
-				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
-				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
-				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
-				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
-				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
-				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
-				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
-				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
-				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
-				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
-				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
-				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
-				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
-				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
-				doaaaaab"
-		}
-		SubProgram "gles " {
-			// Stats: 52 math, 4 textures
-			Keywords{ "SPOT" }
-				"!!GLES
-				#version 100
-
-#ifdef VERTEX
-				attribute vec4 _glesTANGENT;
-			attribute vec4 _glesVertex;
-			attribute vec4 _glesColor;
-			attribute vec3 _glesNormal;
-			attribute vec4 _glesMultiTexCoord0;
-			attribute vec4 _glesMultiTexCoord1;
-			uniform highp mat4 glstate_matrix_mvp;
-			uniform highp mat4 _Object2World;
-			uniform highp mat4 _World2Object;
-			uniform highp vec4 unity_WorldTransformParams;
-			uniform highp vec4 _MainTex_ST;
-			uniform highp vec4 _Emissive_ST;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp float tangentSign_1;
-				lowp vec3 worldTangent_2;
-				lowp vec3 worldNormal_3;
-				highp vec4 tmpvar_4;
-				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				highp vec4 v_5;
-				v_5.x = _World2Object[0].x;
-				v_5.y = _World2Object[1].x;
-				v_5.z = _World2Object[2].x;
-				v_5.w = _World2Object[3].x;
-				highp vec4 v_6;
-				v_6.x = _World2Object[0].y;
-				v_6.y = _World2Object[1].y;
-				v_6.z = _World2Object[2].y;
-				v_6.w = _World2Object[3].y;
-				highp vec4 v_7;
-				v_7.x = _World2Object[0].z;
-				v_7.y = _World2Object[1].z;
-				v_7.z = _World2Object[2].z;
-				v_7.w = _World2Object[3].z;
-				highp vec3 tmpvar_8;
-				tmpvar_8 = normalize(((
-					(v_5.xyz * _glesNormal.x)
-					+
-					(v_6.xyz * _glesNormal.y)
-					) + (v_7.xyz * _glesNormal.z)));
-				worldNormal_3 = tmpvar_8;
-				highp mat3 tmpvar_9;
-				tmpvar_9[0] = _Object2World[0].xyz;
-				tmpvar_9[1] = _Object2World[1].xyz;
-				tmpvar_9[2] = _Object2World[2].xyz;
-				highp vec3 tmpvar_10;
-				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
-				worldTangent_2 = tmpvar_10;
-				highp float tmpvar_11;
-				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
-				tangentSign_1 = tmpvar_11;
-				lowp vec3 tmpvar_12;
-				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
-				lowp vec3 tmpvar_13;
-				tmpvar_13.x = worldTangent_2.x;
-				tmpvar_13.y = tmpvar_12.x;
-				tmpvar_13.z = worldNormal_3.x;
-				lowp vec3 tmpvar_14;
-				tmpvar_14.x = worldTangent_2.y;
-				tmpvar_14.y = tmpvar_12.y;
-				tmpvar_14.z = worldNormal_3.y;
-				lowp vec3 tmpvar_15;
-				tmpvar_15.x = worldTangent_2.z;
-				tmpvar_15.y = tmpvar_12.z;
-				tmpvar_15.z = worldNormal_3.z;
-				gl_Position = (glstate_matrix_mvp * _glesVertex);
-				xlv_TEXCOORD0 = tmpvar_4;
-				xlv_TEXCOORD1 = tmpvar_13;
-				xlv_TEXCOORD2 = tmpvar_14;
-				xlv_TEXCOORD3 = tmpvar_15;
-				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
-				xlv_COLOR0 = _glesColor;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform highp vec3 _WorldSpaceCameraPos;
-			uniform highp vec4 _WorldSpaceLightPos0;
-			uniform lowp vec4 _LightColor0;
-			uniform sampler2D _LightTexture0;
-			uniform mediump mat4 _LightMatrix0;
-			uniform sampler2D _LightTextureB0;
-			uniform mediump float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp vec3 worldN_1;
-				lowp vec4 c_2;
-				lowp float atten_3;
-				mediump vec4 lightCoord_4;
-				lowp vec3 worldViewDir_5;
-				lowp vec3 lightDir_6;
-				highp vec4 tmpvar_7;
-				highp vec3 tmpvar_8;
-				tmpvar_8 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				lightDir_6 = tmpvar_8;
-				highp vec3 tmpvar_9;
-				tmpvar_9 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
-				worldViewDir_5 = tmpvar_9;
-				lowp vec3 tmpvar_10;
-				tmpvar_10 = normalize((worldViewDir_5 + lightDir_6));
-				worldViewDir_5 = tmpvar_10;
-				tmpvar_7 = xlv_COLOR0;
-				lowp vec3 tmpvar_11;
-				lowp float tmpvar_12;
-				highp vec4 mask_13;
-				highp vec4 color_14;
-				lowp vec4 tmpvar_15;
-				tmpvar_15 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_14 = tmpvar_15;
-				lowp vec4 tmpvar_16;
-				tmpvar_16 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_13 = tmpvar_16;
-				highp vec2 tmpvar_17;
-				tmpvar_17.x = color_14.x;
-				tmpvar_17.y = mask_13.x;
-				highp vec2 tmpvar_18;
-				tmpvar_18.x = color_14.y;
-				tmpvar_18.y = mask_13.y;
-				highp vec2 tmpvar_19;
-				tmpvar_19.x = color_14.z;
-				tmpvar_19.y = mask_13.z;
-				highp vec2 tmpvar_20;
-				tmpvar_20.x = color_14.w;
-				tmpvar_20.y = mask_13.w;
-				highp vec2 tmpvar_21;
-				highp float tmpvar_22;
-				tmpvar_22 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_21 = mix(mix(tmpvar_17, tmpvar_18, vec2(clamp(tmpvar_22, 0.0, 1.0))), mix(tmpvar_19, tmpvar_20, vec2(clamp(
-					(tmpvar_22 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_22 - 1.0), 0.0, 1.0)));
-				highp vec3 tmpvar_23;
-				tmpvar_23 = mix(tmpvar_21.xxx, mix(mix(vec3(
-					clamp((tmpvar_21.x + ((1.0 - tmpvar_21.y) * (tmpvar_21.x * tmpvar_21.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_21.yyy), tmpvar_7.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_11 = tmpvar_23;
-				highp float tmpvar_24;
-				tmpvar_24 = pow(((1.0 - tmpvar_21.y) + 0.4), 3.0);
-				tmpvar_12 = ((tmpvar_24 + 0.2) * tmpvar_21.y);
-				highp vec4 tmpvar_25;
-				tmpvar_25.w = 1.0;
-				tmpvar_25.xyz = xlv_TEXCOORD4;
-				highp vec4 tmpvar_26;
-				tmpvar_26 = (_LightMatrix0 * tmpvar_25);
-				lightCoord_4 = tmpvar_26;
-				lowp vec4 tmpvar_27;
-				mediump vec2 P_28;
-				P_28 = ((lightCoord_4.xy / lightCoord_4.w) + 0.5);
-				tmpvar_27 = texture2D (_LightTexture0, P_28);
-				highp vec3 LightCoord_29;
-				LightCoord_29 = lightCoord_4.xyz;
-				highp float tmpvar_30;
-				tmpvar_30 = dot(LightCoord_29, LightCoord_29);
-				lowp vec4 tmpvar_31;
-				tmpvar_31 = texture2D (_LightTextureB0, vec2(tmpvar_30));
-				mediump float tmpvar_32;
-				tmpvar_32 = ((float(
-					(lightCoord_4.z > 0.0)
-					) * tmpvar_27.w) * tmpvar_31.w);
-				atten_3 = tmpvar_32;
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				lowp vec4 c_33;
-				lowp float spec_34;
-				lowp vec3 tmpvar_35;
-				tmpvar_35 = normalize(worldN_1);
-				lowp float tmpvar_36;
-				tmpvar_36 = max(0.0, dot(tmpvar_35, tmpvar_10));
-				mediump float tmpvar_37;
-				tmpvar_37 = (pow(tmpvar_36, (_Shininess * 128.0)) * tmpvar_12);
-				spec_34 = tmpvar_37;
-				c_33.xyz = ((_LightColor0.xyz * (
-					(tmpvar_11 * max(0.0, dot(tmpvar_35, lightDir_6)))
-					+ spec_34)) * atten_3);
-				c_33.w = 1.0;
-				c_2.xyz = c_33.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "gles3 " {
-			Keywords{ "SPOT" }
-				"!!GLES3
-#ifdef VERTEX
-				#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in highp vec4 in_POSITION0;
-			in highp vec4 in_TANGENT0;
-			in highp vec3 in_NORMAL0;
-			in highp vec4 in_TEXCOORD0;
-			in highp vec4 in_TEXCOORD1;
-			in lowp vec4 in_COLOR0;
-			out highp vec4 vs_TEXCOORD0;
-			out lowp vec3 vs_TEXCOORD1;
-			out lowp vec3 vs_TEXCOORD2;
-			out lowp vec3 vs_TEXCOORD3;
-			out highp vec3 vs_TEXCOORD4;
-			out lowp vec4 vs_COLOR0;
-			highp vec4 t0;
-			highp vec3 t1;
-			lowp vec3 t10_2;
-			highp float t3;
-			highp float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t10_2.xyz = t0.xyz * t1.xyz;
-				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t10_2.xyz = vec3(t3) * t10_2.xyz;
-				vs_TEXCOORD1.y = t10_2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t10_2.y;
-				vs_TEXCOORD3.y = t10_2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform lowp sampler2D _MainTex;
-			uniform lowp sampler2D _Emissive;
-			uniform lowp sampler2D _LightTexture0;
-			uniform lowp sampler2D _LightTextureB0;
-			in highp vec4 vs_TEXCOORD0;
-			in lowp vec3 vs_TEXCOORD1;
-			in lowp vec3 vs_TEXCOORD2;
-			in lowp vec3 vs_TEXCOORD3;
-			in highp vec3 vs_TEXCOORD4;
-			in lowp vec4 vs_COLOR0;
-			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec2 t0;
-			mediump vec4 t16_0;
-			highp vec4 t1;
-			lowp float t10_1;
-			highp vec4 t2;
-			lowp vec4 t10_3;
-			lowp vec3 t10_4;
-			lowp vec3 t10_5;
-			mediump vec2 t16_6;
-			highp vec3 t7;
-			bool tb8;
-			mediump float t16_13;
-			highp vec2 t14;
-			mediump float t16_14;
-			mediump float t16_15;
-			lowp float t10_15;
-			highp float t22;
-			lowp float t10_25;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t14.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t14.xy = clamp(t14.xy, 0.0, 1.0);
-				t1.xy = t14.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t14.yy * t1.xy + t0.xy;
-				t14.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t14.x = t1.x * t14.x + t0.y;
-				t14.x = clamp(t14.x, 0.0, 1.0);
-				t1.xzw = (-t14.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t14.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t16_14 = vs_COLOR0.w;
-				t16_14 = clamp(t16_14, 0.0, 1.0);
-				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t22 = dot(t1.xyz, t1.xyz);
-				t22 = inversesqrt(t22);
-				t1.xyz = vec3(t22) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t22 = dot(t2.xyz, t2.xyz);
-				t22 = inversesqrt(t22);
-				t10_4.xyz = t2.xyz * vec3(t22) + t1.xyz;
-				t10_25 = dot(t10_4.xyz, t10_4.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
-				t10_5.x = vs_TEXCOORD1.z;
-				t10_5.y = vs_TEXCOORD2.z;
-				t10_5.z = vs_TEXCOORD3.z;
-				t10_25 = dot(t10_5.xyz, t10_5.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_5.xyz = vec3(t10_25) * t10_5.xyz;
-				t10_4.x = dot(t10_5.xyz, t10_4.xyz);
-				t10_4.y = dot(t10_5.xyz, t1.xyz);
-				t10_4.xy = max(t10_4.xy, vec2(0.0, 0.0));
-				t16_6.x = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6.x = t16_6.x * t16_13;
-				t16_6.x = exp2(t16_6.x);
-				t16_6.x = t0.x * t16_6.x;
-				t10_4.xyz = t7.xyz * t10_4.yyy + t16_6.xxx;
-				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
-				t16_0 = vs_TEXCOORD4.yyyy * _LightMatrix0[1];
-				t16_0 = _LightMatrix0[0] * vs_TEXCOORD4.xxxx + t16_0;
-				t16_0 = _LightMatrix0[2] * vs_TEXCOORD4.zzzz + t16_0;
-				t16_0 = t16_0 + _LightMatrix0[3];
-				t16_6.xy = t16_0.xy / t16_0.ww;
-				t16_6.xy = t16_6.xy + vec2(0.5, 0.5);
-				t10_1 = texture(_LightTexture0, t16_6.xy).w;
-				tb8 = 0.0<t16_0.z;
-				t16_15 = dot(t16_0.xyz, t16_0.xyz);
-				t10_15 = texture(_LightTextureB0, vec2(t16_15)).w;
-				t10_25 = (tb8) ? 1.0 : 0.0;
-				t10_25 = t10_1 * t10_25;
-				t10_25 = t10_15 * t10_25;
-				SV_Target0.xyz = vec3(t10_25) * t10_4.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "metal " {
-			// Stats: 19 math
-			Keywords{ "SPOT" }
-				Bind "tangent" ATTR0
-				Bind "vertex" ATTR1
-				Bind "color" ATTR2
-				Bind "normal" ATTR3
-				Bind "texcoord" ATTR4
-				Bind "texcoord1" ATTR5
-				ConstBuffer "$Globals" 240
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 64[_Object2World]
-				Matrix 128[_World2Object]
-				Vector 192[unity_WorldTransformParams]
-				Vector 208[_MainTex_ST]
-				Vector 224[_Emissive_ST]
-				"metal_vs
-#include <metal_stdlib>
-				using namespace metal;
-			struct xlatMtlShaderInput {
-				float4 _glesTANGENT[[attribute(0)]];
-				float4 _glesVertex[[attribute(1)]];
-				float4 _glesColor[[attribute(2)]];
-				float3 _glesNormal[[attribute(3)]];
-				float4 _glesMultiTexCoord0[[attribute(4)]];
-				float4 _glesMultiTexCoord1[[attribute(5)]];
-			};
-			struct xlatMtlShaderOutput {
-				float4 gl_Position[[position]];
-				float4 xlv_TEXCOORD0;
-				half3 xlv_TEXCOORD1;
-				half3 xlv_TEXCOORD2;
-				half3 xlv_TEXCOORD3;
-				float3 xlv_TEXCOORD4;
-				half4 xlv_COLOR0;
-			};
-			struct xlatMtlShaderUniform {
-				float4x4 glstate_matrix_mvp;
-				float4x4 _Object2World;
-				float4x4 _World2Object;
-				float4 unity_WorldTransformParams;
-				float4 _MainTex_ST;
-				float4 _Emissive_ST;
-			};
-			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
-			{
-				xlatMtlShaderOutput _mtl_o;
-				half4 tmpvar_1;
-				tmpvar_1 = half4(_mtl_i._glesColor);
-				half tangentSign_2;
-				half3 worldTangent_3;
-				half3 worldNormal_4;
-				float4 tmpvar_5;
-				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
-				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
-				float4 v_6;
-				v_6.x = _mtl_u._World2Object[0].x;
-				v_6.y = _mtl_u._World2Object[1].x;
-				v_6.z = _mtl_u._World2Object[2].x;
-				v_6.w = _mtl_u._World2Object[3].x;
-				float4 v_7;
-				v_7.x = _mtl_u._World2Object[0].y;
-				v_7.y = _mtl_u._World2Object[1].y;
-				v_7.z = _mtl_u._World2Object[2].y;
-				v_7.w = _mtl_u._World2Object[3].y;
-				float4 v_8;
-				v_8.x = _mtl_u._World2Object[0].z;
-				v_8.y = _mtl_u._World2Object[1].z;
-				v_8.z = _mtl_u._World2Object[2].z;
-				v_8.w = _mtl_u._World2Object[3].z;
-				float3 tmpvar_9;
-				tmpvar_9 = normalize(((
-					(v_6.xyz * _mtl_i._glesNormal.x)
-					+
-					(v_7.xyz * _mtl_i._glesNormal.y)
-					) + (v_8.xyz * _mtl_i._glesNormal.z)));
-				worldNormal_4 = half3(tmpvar_9);
-				float3x3 tmpvar_10;
-				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
-				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
-				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
-				float3 tmpvar_11;
-				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
-				worldTangent_3 = half3(tmpvar_11);
-				float tmpvar_12;
-				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
-				tangentSign_2 = half(tmpvar_12);
-				half3 tmpvar_13;
-				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
-				half3 tmpvar_14;
-				tmpvar_14.x = worldTangent_3.x;
-				tmpvar_14.y = tmpvar_13.x;
-				tmpvar_14.z = worldNormal_4.x;
-				half3 tmpvar_15;
-				tmpvar_15.x = worldTangent_3.y;
-				tmpvar_15.y = tmpvar_13.y;
-				tmpvar_15.z = worldNormal_4.y;
-				half3 tmpvar_16;
-				tmpvar_16.x = worldTangent_3.z;
-				tmpvar_16.y = tmpvar_13.z;
-				tmpvar_16.z = worldNormal_4.z;
-				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
-				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
-				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
-				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
-				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
-				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
-				_mtl_o.xlv_COLOR0 = tmpvar_1;
-				return _mtl_o;
-			}
-
-			"
-		}
-		SubProgram "glcore " {
-			Keywords{ "SPOT" }
-				"!!GL3x
-#ifdef VERTEX
-				#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in  vec4 in_POSITION0;
-			in  vec4 in_TANGENT0;
-			in  vec3 in_NORMAL0;
-			in  vec4 in_TEXCOORD0;
-			in  vec4 in_TEXCOORD1;
-			in  vec4 in_COLOR0;
-			out vec4 vs_TEXCOORD0;
-			out vec3 vs_TEXCOORD1;
-			out vec3 vs_TEXCOORD2;
-			out vec3 vs_TEXCOORD3;
-			out vec3 vs_TEXCOORD4;
-			out vec4 vs_COLOR0;
-			vec4 t0;
-			vec3 t1;
-			vec3 t2;
-			float t3;
-			float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t2.xyz = t0.xyz * t1.xyz;
-				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t2.xyz = vec3(t3) * t2.xyz;
-				vs_TEXCOORD1.y = t2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t2.y;
-				vs_TEXCOORD3.y = t2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform  sampler2D _MainTex;
-			uniform  sampler2D _Emissive;
-			uniform  sampler2D _LightTexture0;
-			uniform  sampler2D _LightTextureB0;
-			in  vec4 vs_TEXCOORD0;
-			in  vec3 vs_TEXCOORD1;
-			in  vec3 vs_TEXCOORD2;
-			in  vec3 vs_TEXCOORD3;
-			in  vec3 vs_TEXCOORD4;
-			in  vec4 vs_COLOR0;
-			out vec4 SV_Target0;
-			vec3 t0;
-			vec4 t1;
-			lowp vec4 t10_1;
-			vec4 t2;
-			lowp vec4 t10_2;
-			vec3 t3;
-			lowp vec4 t10_3;
-			vec3 t4;
-			float t5;
-			vec2 t8;
-			float t9;
-			float t12;
-			bool tb12;
-			float t13;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = vec3(t13) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = vec3(t13) * t2.xyz;
-				t3.x = vs_TEXCOORD1.z;
-				t3.y = vs_TEXCOORD2.z;
-				t3.z = vs_TEXCOORD3.z;
-				t13 = dot(t3.xyz, t3.xyz);
-				t13 = inversesqrt(t13);
-				t3.xyz = vec3(t13) * t3.xyz;
-				t1.w = dot(t3.xyz, t2.xyz);
-				t1.x = dot(t3.xyz, t1.xyz);
-				t1.xy = max(t1.xw, vec2(0.0, 0.0));
-				t5 = log2(t1.y);
-				t9 = _Shininess * 128.0;
-				t5 = t5 * t9;
-				t5 = exp2(t5);
-				t0.x = t0.x * t5;
-				t0.xyz = t4.xyz * t1.xxx + t0.xxx;
-				t0.xyz = t0.xyz * _LightColor0.xyz;
-				t1 = vs_TEXCOORD4.yyyy * _LightMatrix0[1];
-				t1 = _LightMatrix0[0] * vs_TEXCOORD4.xxxx + t1;
-				t1 = _LightMatrix0[2] * vs_TEXCOORD4.zzzz + t1;
-				t1 = t1 + _LightMatrix0[3];
-				t2.xy = t1.xy / t1.ww;
-				t2.xy = t2.xy + vec2(0.5, 0.5);
-				t10_2 = texture(_LightTexture0, t2.xy);
-				tb12 = 0.0<t1.z;
-				t1.x = dot(t1.xyz, t1.xyz);
-				t10_1 = texture(_LightTextureB0, t1.xx);
-				t12 = tb12 ? 1.0 : float(0.0);
-				t12 = t10_2.w * t12;
-				t12 = t10_1.w * t12;
-				SV_Target0.xyz = vec3(t12) * t0.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "opengl " {
-			// Stats: 47 math, 4 textures
-			Keywords{ "POINT_COOKIE" }
-				"!!GLSL#version 120
-
-#ifdef VERTEX
-
-				uniform mat4 _Object2World;
-			uniform mat4 _World2Object;
-			uniform vec4 unity_WorldTransformParams;
-			uniform vec4 _MainTex_ST;
-			uniform vec4 _Emissive_ST;
-			attribute vec4 TANGENT;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec4 tmpvar_1;
-				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				vec4 v_2;
-				v_2.x = _World2Object[0].x;
-				v_2.y = _World2Object[1].x;
-				v_2.z = _World2Object[2].x;
-				v_2.w = _World2Object[3].x;
-				vec4 v_3;
-				v_3.x = _World2Object[0].y;
-				v_3.y = _World2Object[1].y;
-				v_3.z = _World2Object[2].y;
-				v_3.w = _World2Object[3].y;
-				vec4 v_4;
-				v_4.x = _World2Object[0].z;
-				v_4.y = _World2Object[1].z;
-				v_4.z = _World2Object[2].z;
-				v_4.w = _World2Object[3].z;
-				vec3 tmpvar_5;
-				tmpvar_5 = normalize(((
-					(v_2.xyz * gl_Normal.x)
-					+
-					(v_3.xyz * gl_Normal.y)
-					) + (v_4.xyz * gl_Normal.z)));
-				mat3 tmpvar_6;
-				tmpvar_6[0] = _Object2World[0].xyz;
-				tmpvar_6[1] = _Object2World[1].xyz;
-				tmpvar_6[2] = _Object2World[2].xyz;
-				vec3 tmpvar_7;
-				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
-				vec3 tmpvar_8;
-				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
-				vec3 tmpvar_9;
-				tmpvar_9.x = tmpvar_7.x;
-				tmpvar_9.y = tmpvar_8.x;
-				tmpvar_9.z = tmpvar_5.x;
-				vec3 tmpvar_10;
-				tmpvar_10.x = tmpvar_7.y;
-				tmpvar_10.y = tmpvar_8.y;
-				tmpvar_10.z = tmpvar_5.y;
-				vec3 tmpvar_11;
-				tmpvar_11.x = tmpvar_7.z;
-				tmpvar_11.y = tmpvar_8.z;
-				tmpvar_11.z = tmpvar_5.z;
-				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
-				xlv_TEXCOORD0 = tmpvar_1;
-				xlv_TEXCOORD1 = tmpvar_9;
-				xlv_TEXCOORD2 = tmpvar_10;
-				xlv_TEXCOORD3 = tmpvar_11;
-				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
-				xlv_COLOR0 = gl_Color;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform vec3 _WorldSpaceCameraPos;
-			uniform vec4 _WorldSpaceLightPos0;
-			uniform vec4 _LightColor0;
-			uniform samplerCube _LightTexture0;
-			uniform mat4 _LightMatrix0;
-			uniform sampler2D _LightTextureB0;
-			uniform float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec3 worldN_1;
-				vec4 c_2;
-				vec3 tmpvar_3;
-				tmpvar_3 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				vec4 tmpvar_4;
-				tmpvar_4 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				vec4 tmpvar_5;
-				tmpvar_5 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				vec2 tmpvar_6;
-				tmpvar_6.x = tmpvar_4.x;
-				tmpvar_6.y = tmpvar_5.x;
-				vec2 tmpvar_7;
-				tmpvar_7.x = tmpvar_4.y;
-				tmpvar_7.y = tmpvar_5.y;
-				vec2 tmpvar_8;
-				tmpvar_8.x = tmpvar_4.z;
-				tmpvar_8.y = tmpvar_5.z;
-				vec2 tmpvar_9;
-				tmpvar_9.x = tmpvar_4.w;
-				tmpvar_9.y = tmpvar_5.w;
-				vec2 tmpvar_10;
-				float tmpvar_11;
-				tmpvar_11 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_10 = mix(mix(tmpvar_6, tmpvar_7, vec2(clamp(tmpvar_11, 0.0, 1.0))), mix(tmpvar_8, tmpvar_9, vec2(clamp(
-					(tmpvar_11 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_11 - 1.0), 0.0, 1.0)));
-				vec4 tmpvar_12;
-				tmpvar_12.w = 1.0;
-				tmpvar_12.xyz = xlv_TEXCOORD4;
-				vec3 tmpvar_13;
-				tmpvar_13 = (_LightMatrix0 * tmpvar_12).xyz;
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				vec4 c_14;
-				vec3 tmpvar_15;
-				tmpvar_15 = normalize(worldN_1);
-				c_14.xyz = ((_LightColor0.xyz * (
-					(mix(tmpvar_10.xxx, mix(mix(vec3(
-						clamp((tmpvar_10.x + ((1.0 - tmpvar_10.y) * (tmpvar_10.x * tmpvar_10.x))), 0.0, 1.0)
-						), xlv_COLOR0.xyz, tmpvar_10.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * max(0.0, dot(tmpvar_15, tmpvar_3)))
-					+
-					(pow(max(0.0, dot(tmpvar_15,
-						normalize((normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4)) + tmpvar_3))
-						)), (_Shininess * 128.0)) * ((pow(
-							((1.0 - tmpvar_10.y) + 0.4)
-							, 3.0) + 0.2) * tmpvar_10.y))
-					)) * (texture2D (_LightTextureB0, vec2(dot(tmpvar_13, tmpvar_13))).w * textureCube(_LightTexture0, tmpvar_13).w));
-				c_14.w = 1.0;
-				c_2.xyz = c_14.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "d3d9 " {
-			// Stats: 35 math
-			Keywords{ "POINT_COOKIE" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				Matrix 4[_Object2World] 3
-				Matrix 7[_World2Object] 3
-				Matrix 0[glstate_matrix_mvp]
-				Vector 12[_Emissive_ST]
-				Vector 11[_MainTex_ST]
-				Vector 10[unity_WorldTransformParams]
-				"vs_3_0
-				dcl_position v0
-				dcl_tangent v1
-				dcl_normal v2
-				dcl_texcoord v3
-				dcl_texcoord1 v4
-				dcl_color v5
-				dcl_position o0
-				dcl_texcoord o1
-				dcl_texcoord1 o2.xyz
-				dcl_texcoord2 o3.xyz
-				dcl_texcoord3 o4.xyz
-				dcl_texcoord4 o5.xyz
-				dcl_color o6
-				dp4 o0.x, c0, v0
-				dp4 o0.y, c1, v0
-				dp4 o0.z, c2, v0
-				dp4 o0.w, c3, v0
-				mad o1.xy, v3, c11, c11.zwzw
-				mad o1.zw, v4.xyxy, c12.xyxy, c12
-				dp4 o5.x, c4, v0
-				dp4 o5.y, c5, v0
-				dp4 o5.z, c6, v0
-				dp3 r0.z, c4, v1
-				dp3 r0.x, c5, v1
-				dp3 r0.y, c6, v1
-				dp3 r0.w, r0, r0
-				rsq r0.w, r0.w
-				mul r0.xyz, r0.w, r0
-				mov o2.x, r0.z
-				mul r1.xyz, c8.zxyw, v2.y
-				mad r1.xyz, c7.zxyw, v2.x, r1
-				mad r1.xyz, c9.zxyw, v2.z, r1
-				dp3 r0.w, r1, r1
-				rsq r0.w, r0.w
-				mul r1.xyz, r0.w, r1
-				mul r2.xyz, r0, r1
-				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
-				mul r0.z, c10.w, v1.w
-				mul r2.xyz, r0.z, r2
-				mov o2.y, r2.x
-				mov o2.z, r1.y
-				mov o3.x, r0.x
-				mov o4.x, r0.y
-				mov o3.y, r2.y
-				mov o4.y, r2.z
-				mov o3.z, r1.z
-				mov o4.z, r1.x
-				mov o6, v5
-
-				"
-		}
-		SubProgram "d3d11 " {
-			// Stats: 34 math
-			Keywords{ "POINT_COOKIE" }
-				Bind "vertex" Vertex
-				Bind "color" Color
-				Bind "normal" Normal
-				Bind "texcoord" TexCoord0
-				Bind "texcoord1" TexCoord1
-				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 272
-				Vector 240[_MainTex_ST]
-				Vector 256[_Emissive_ST]
-				ConstBuffer "UnityPerDraw" 352
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 192[_Object2World]
-				Matrix 256[_World2Object]
-				Vector 336[unity_WorldTransformParams]
-				BindCB  "$Globals" 0
-				BindCB  "UnityPerDraw" 1
-				"vs_4_0
-				root12:aaacaaaa
-				eefiecedhaomgnoeigpocikojcffdbiamlplojojabaaaaaaaeaiaaaaadaaaaaa
-				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
-				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
-				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
-				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
-				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
-				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
-				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
-				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
-				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
-				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
-				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
-				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
-				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
-				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
-				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
-				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaa
-				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
-				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
-				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
-				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
-				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
-				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
-				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
-				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
-				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
-				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
-				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
-				aaaaaaaaapaaaaaaogikcaaaaaaaaaaaapaaaaaadcaaaaalmccabaaaabaaaaaa
-				agbebaaaaeaaaaaaagiecaaaaaaaaaaabaaaaaaakgiocaaaaaaaaaaabaaaaaaa
-				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
-				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
-				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
-				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
-				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
-				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
-				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
-				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
-				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
-				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
-				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
-				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
-				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
-				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
-				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
-				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
-				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
-				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
-				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
-				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
-				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
-				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
-				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
-				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
-				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
-				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
-				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
-				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
-				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
-				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
-				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
-				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
-				doaaaaab"
-		}
-		SubProgram "gles " {
-			// Stats: 47 math, 4 textures
-			Keywords{ "POINT_COOKIE" }
-				"!!GLES
-				#version 100
-
-#ifdef VERTEX
-				attribute vec4 _glesTANGENT;
-			attribute vec4 _glesVertex;
-			attribute vec4 _glesColor;
-			attribute vec3 _glesNormal;
-			attribute vec4 _glesMultiTexCoord0;
-			attribute vec4 _glesMultiTexCoord1;
-			uniform highp mat4 glstate_matrix_mvp;
-			uniform highp mat4 _Object2World;
-			uniform highp mat4 _World2Object;
-			uniform highp vec4 unity_WorldTransformParams;
-			uniform highp vec4 _MainTex_ST;
-			uniform highp vec4 _Emissive_ST;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp float tangentSign_1;
-				lowp vec3 worldTangent_2;
-				lowp vec3 worldNormal_3;
-				highp vec4 tmpvar_4;
-				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				highp vec4 v_5;
-				v_5.x = _World2Object[0].x;
-				v_5.y = _World2Object[1].x;
-				v_5.z = _World2Object[2].x;
-				v_5.w = _World2Object[3].x;
-				highp vec4 v_6;
-				v_6.x = _World2Object[0].y;
-				v_6.y = _World2Object[1].y;
-				v_6.z = _World2Object[2].y;
-				v_6.w = _World2Object[3].y;
-				highp vec4 v_7;
-				v_7.x = _World2Object[0].z;
-				v_7.y = _World2Object[1].z;
-				v_7.z = _World2Object[2].z;
-				v_7.w = _World2Object[3].z;
-				highp vec3 tmpvar_8;
-				tmpvar_8 = normalize(((
-					(v_5.xyz * _glesNormal.x)
-					+
-					(v_6.xyz * _glesNormal.y)
-					) + (v_7.xyz * _glesNormal.z)));
-				worldNormal_3 = tmpvar_8;
-				highp mat3 tmpvar_9;
-				tmpvar_9[0] = _Object2World[0].xyz;
-				tmpvar_9[1] = _Object2World[1].xyz;
-				tmpvar_9[2] = _Object2World[2].xyz;
-				highp vec3 tmpvar_10;
-				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
-				worldTangent_2 = tmpvar_10;
-				highp float tmpvar_11;
-				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
-				tangentSign_1 = tmpvar_11;
-				lowp vec3 tmpvar_12;
-				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
-				lowp vec3 tmpvar_13;
-				tmpvar_13.x = worldTangent_2.x;
-				tmpvar_13.y = tmpvar_12.x;
-				tmpvar_13.z = worldNormal_3.x;
-				lowp vec3 tmpvar_14;
-				tmpvar_14.x = worldTangent_2.y;
-				tmpvar_14.y = tmpvar_12.y;
-				tmpvar_14.z = worldNormal_3.y;
-				lowp vec3 tmpvar_15;
-				tmpvar_15.x = worldTangent_2.z;
-				tmpvar_15.y = tmpvar_12.z;
-				tmpvar_15.z = worldNormal_3.z;
-				gl_Position = (glstate_matrix_mvp * _glesVertex);
-				xlv_TEXCOORD0 = tmpvar_4;
-				xlv_TEXCOORD1 = tmpvar_13;
-				xlv_TEXCOORD2 = tmpvar_14;
-				xlv_TEXCOORD3 = tmpvar_15;
-				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
-				xlv_COLOR0 = _glesColor;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform highp vec3 _WorldSpaceCameraPos;
-			uniform highp vec4 _WorldSpaceLightPos0;
-			uniform lowp vec4 _LightColor0;
-			uniform lowp samplerCube _LightTexture0;
-			uniform mediump mat4 _LightMatrix0;
-			uniform sampler2D _LightTextureB0;
-			uniform mediump float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying highp vec4 xlv_TEXCOORD0;
-			varying lowp vec3 xlv_TEXCOORD1;
-			varying lowp vec3 xlv_TEXCOORD2;
-			varying lowp vec3 xlv_TEXCOORD3;
-			varying highp vec3 xlv_TEXCOORD4;
-			varying lowp vec4 xlv_COLOR0;
-			void main()
-			{
-				lowp vec3 worldN_1;
-				lowp vec4 c_2;
-				lowp vec3 worldViewDir_3;
-				lowp vec3 lightDir_4;
-				highp vec4 tmpvar_5;
-				highp vec3 tmpvar_6;
-				tmpvar_6 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
-				lightDir_4 = tmpvar_6;
-				highp vec3 tmpvar_7;
-				tmpvar_7 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
-				worldViewDir_3 = tmpvar_7;
-				lowp vec3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = xlv_COLOR0;
-				lowp vec3 tmpvar_9;
-				lowp float tmpvar_10;
-				highp vec4 mask_11;
-				highp vec4 color_12;
-				lowp vec4 tmpvar_13;
-				tmpvar_13 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_12 = tmpvar_13;
-				lowp vec4 tmpvar_14;
-				tmpvar_14 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_11 = tmpvar_14;
-				highp vec2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
-				highp vec2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
-				highp vec2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
-				highp vec2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				highp vec2 tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, vec2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, vec2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				highp vec3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(vec3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = tmpvar_21;
-				highp float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = ((tmpvar_22 + 0.2) * tmpvar_19.y);
-				highp vec4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = xlv_TEXCOORD4;
-				highp vec3 tmpvar_24;
-				tmpvar_24 = (_LightMatrix0 * tmpvar_23).xyz;
-				highp float tmpvar_25;
-				tmpvar_25 = dot(tmpvar_24, tmpvar_24);
-				worldN_1.x = xlv_TEXCOORD1.z;
-				worldN_1.y = xlv_TEXCOORD2.z;
-				worldN_1.z = xlv_TEXCOORD3.z;
-				lowp vec4 c_26;
-				lowp float spec_27;
-				lowp vec3 tmpvar_28;
-				tmpvar_28 = normalize(worldN_1);
-				lowp float tmpvar_29;
-				tmpvar_29 = max(0.0, dot(tmpvar_28, tmpvar_8));
-				mediump float tmpvar_30;
-				tmpvar_30 = (pow(tmpvar_29, (_Shininess * 128.0)) * tmpvar_10);
-				spec_27 = tmpvar_30;
-				c_26.xyz = ((_LightColor0.xyz * (
-					(tmpvar_9 * max(0.0, dot(tmpvar_28, lightDir_4)))
-					+ spec_27)) * (texture2D (_LightTextureB0, vec2(tmpvar_25)).w * textureCube(_LightTexture0, tmpvar_24).w));
-				c_26.w = 1.0;
-				c_2.xyz = c_26.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
-			}
-
-
-#endif
-			"
-		}
-		SubProgram "gles3 " {
-			Keywords{ "POINT_COOKIE" }
-				"!!GLES3
-#ifdef VERTEX
-				#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in highp vec4 in_POSITION0;
-			in highp vec4 in_TANGENT0;
-			in highp vec3 in_NORMAL0;
-			in highp vec4 in_TEXCOORD0;
-			in highp vec4 in_TEXCOORD1;
-			in lowp vec4 in_COLOR0;
-			out highp vec4 vs_TEXCOORD0;
-			out lowp vec3 vs_TEXCOORD1;
-			out lowp vec3 vs_TEXCOORD2;
-			out lowp vec3 vs_TEXCOORD3;
-			out highp vec3 vs_TEXCOORD4;
-			out lowp vec4 vs_COLOR0;
-			highp vec4 t0;
-			highp vec3 t1;
-			lowp vec3 t10_2;
-			highp float t3;
-			highp float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t10_2.xyz = t0.xyz * t1.xyz;
-				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t10_2.xyz = vec3(t3) * t10_2.xyz;
-				vs_TEXCOORD1.y = t10_2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t10_2.y;
-				vs_TEXCOORD3.y = t10_2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 300 es
-				precision highp float;
-			precision highp int;
-			uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	mediump vec4 unity_4LightAtten0;
-			uniform 	mediump vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	mediump vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	mediump vec4 unity_SHAr;
-			uniform 	mediump vec4 unity_SHAg;
-			uniform 	mediump vec4 unity_SHAb;
-			uniform 	mediump vec4 unity_SHBr;
-			uniform 	mediump vec4 unity_SHBg;
-			uniform 	mediump vec4 unity_SHBb;
-			uniform 	mediump vec4 unity_SHC;
-			uniform 	mediump vec3 unity_LightColor0;
-			uniform 	mediump vec3 unity_LightColor1;
-			uniform 	mediump vec3 unity_LightColor2;
-			uniform 	mediump vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	mediump vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	lowp vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	lowp vec4 unity_AmbientSky;
-			uniform 	lowp vec4 unity_AmbientEquator;
-			uniform 	lowp vec4 unity_AmbientGround;
-			uniform 	lowp vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	mediump vec4 unity_SpecCube1_HDR;
-			uniform 	lowp vec4 unity_ColorSpaceGrey;
-			uniform 	lowp vec4 unity_ColorSpaceDouble;
-			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	mediump vec4 unity_ColorSpaceLuminance;
-			uniform 	mediump vec4 unity_Lightmap_HDR;
-			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
-			uniform 	lowp vec4 _LightColor0;
-			uniform 	lowp vec4 _SpecColor;
-			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mediump mat4 _LightMatrix0;
-			uniform 	mediump float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform lowp sampler2D _MainTex;
-			uniform lowp sampler2D _Emissive;
-			uniform lowp sampler2D _LightTextureB0;
-			uniform lowp samplerCube _LightTexture0;
-			in highp vec4 vs_TEXCOORD0;
-			in lowp vec3 vs_TEXCOORD1;
-			in lowp vec3 vs_TEXCOORD2;
-			in lowp vec3 vs_TEXCOORD3;
-			in highp vec3 vs_TEXCOORD4;
-			in lowp vec4 vs_COLOR0;
-			layout(location = 0) out lowp vec4 SV_Target0;
-			highp vec2 t0;
-			mediump float t16_0;
-			lowp float t10_0;
-			highp vec4 t1;
-			highp vec4 t2;
-			lowp vec4 t10_3;
-			lowp vec3 t10_4;
-			lowp vec3 t10_5;
-			mediump vec3 t16_6;
-			highp vec3 t7;
-			lowp float t10_7;
-			mediump float t16_13;
-			highp vec2 t14;
-			mediump float t16_14;
-			highp float t22;
-			lowp float t10_25;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t14.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t14.xy = clamp(t14.xy, 0.0, 1.0);
-				t1.xy = t14.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t14.yy * t1.xy + t0.xy;
-				t14.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t14.x = t1.x * t14.x + t0.y;
-				t14.x = clamp(t14.x, 0.0, 1.0);
-				t1.xzw = (-t14.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t14.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t16_14 = vs_COLOR0.w;
-				t16_14 = clamp(t16_14, 0.0, 1.0);
-				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t22 = dot(t1.xyz, t1.xyz);
-				t22 = inversesqrt(t22);
-				t1.xyz = vec3(t22) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t22 = dot(t2.xyz, t2.xyz);
-				t22 = inversesqrt(t22);
-				t10_4.xyz = t2.xyz * vec3(t22) + t1.xyz;
-				t10_25 = dot(t10_4.xyz, t10_4.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
-				t10_5.x = vs_TEXCOORD1.z;
-				t10_5.y = vs_TEXCOORD2.z;
-				t10_5.z = vs_TEXCOORD3.z;
-				t10_25 = dot(t10_5.xyz, t10_5.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_5.xyz = vec3(t10_25) * t10_5.xyz;
-				t10_4.x = dot(t10_5.xyz, t10_4.xyz);
-				t10_4.y = dot(t10_5.xyz, t1.xyz);
-				t10_4.xy = max(t10_4.xy, vec2(0.0, 0.0));
-				t16_6.x = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6.x = t16_6.x * t16_13;
-				t16_6.x = exp2(t16_6.x);
-				t16_6.x = t0.x * t16_6.x;
-				t10_4.xyz = t7.xyz * t10_4.yyy + t16_6.xxx;
-				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
-				t16_6.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
-				t16_6.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t16_6.xyz;
-				t16_6.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t16_6.xyz;
-				t16_6.xyz = t16_6.xyz + _LightMatrix0[3].xyz;
-				t16_0 = dot(t16_6.xyz, t16_6.xyz);
-				t10_7 = texture(_LightTexture0, t16_6.xyz).w;
-				t10_0 = texture(_LightTextureB0, vec2(t16_0)).w;
-				t16_0 = t10_7 * t10_0;
-				SV_Target0.xyz = vec3(t16_0) * t10_4.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "metal " {
-			// Stats: 19 math
-			Keywords{ "POINT_COOKIE" }
-				Bind "tangent" ATTR0
-				Bind "vertex" ATTR1
-				Bind "color" ATTR2
-				Bind "normal" ATTR3
-				Bind "texcoord" ATTR4
-				Bind "texcoord1" ATTR5
-				ConstBuffer "$Globals" 240
-				Matrix 0[glstate_matrix_mvp]
-				Matrix 64[_Object2World]
-				Matrix 128[_World2Object]
-				Vector 192[unity_WorldTransformParams]
-				Vector 208[_MainTex_ST]
-				Vector 224[_Emissive_ST]
-				"metal_vs
-#include <metal_stdlib>
-				using namespace metal;
-			struct xlatMtlShaderInput {
-				float4 _glesTANGENT[[attribute(0)]];
-				float4 _glesVertex[[attribute(1)]];
-				float4 _glesColor[[attribute(2)]];
-				float3 _glesNormal[[attribute(3)]];
-				float4 _glesMultiTexCoord0[[attribute(4)]];
-				float4 _glesMultiTexCoord1[[attribute(5)]];
-			};
-			struct xlatMtlShaderOutput {
-				float4 gl_Position[[position]];
-				float4 xlv_TEXCOORD0;
-				half3 xlv_TEXCOORD1;
-				half3 xlv_TEXCOORD2;
-				half3 xlv_TEXCOORD3;
-				float3 xlv_TEXCOORD4;
-				half4 xlv_COLOR0;
-			};
-			struct xlatMtlShaderUniform {
-				float4x4 glstate_matrix_mvp;
-				float4x4 _Object2World;
-				float4x4 _World2Object;
-				float4 unity_WorldTransformParams;
-				float4 _MainTex_ST;
-				float4 _Emissive_ST;
-			};
-			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
-			{
-				xlatMtlShaderOutput _mtl_o;
-				half4 tmpvar_1;
-				tmpvar_1 = half4(_mtl_i._glesColor);
-				half tangentSign_2;
-				half3 worldTangent_3;
-				half3 worldNormal_4;
-				float4 tmpvar_5;
-				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
-				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
-				float4 v_6;
-				v_6.x = _mtl_u._World2Object[0].x;
-				v_6.y = _mtl_u._World2Object[1].x;
-				v_6.z = _mtl_u._World2Object[2].x;
-				v_6.w = _mtl_u._World2Object[3].x;
-				float4 v_7;
-				v_7.x = _mtl_u._World2Object[0].y;
-				v_7.y = _mtl_u._World2Object[1].y;
-				v_7.z = _mtl_u._World2Object[2].y;
-				v_7.w = _mtl_u._World2Object[3].y;
-				float4 v_8;
-				v_8.x = _mtl_u._World2Object[0].z;
-				v_8.y = _mtl_u._World2Object[1].z;
-				v_8.z = _mtl_u._World2Object[2].z;
-				v_8.w = _mtl_u._World2Object[3].z;
-				float3 tmpvar_9;
-				tmpvar_9 = normalize(((
-					(v_6.xyz * _mtl_i._glesNormal.x)
-					+
-					(v_7.xyz * _mtl_i._glesNormal.y)
-					) + (v_8.xyz * _mtl_i._glesNormal.z)));
-				worldNormal_4 = half3(tmpvar_9);
-				float3x3 tmpvar_10;
-				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
-				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
-				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
-				float3 tmpvar_11;
-				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
-				worldTangent_3 = half3(tmpvar_11);
-				float tmpvar_12;
-				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
-				tangentSign_2 = half(tmpvar_12);
-				half3 tmpvar_13;
-				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
-				half3 tmpvar_14;
-				tmpvar_14.x = worldTangent_3.x;
-				tmpvar_14.y = tmpvar_13.x;
-				tmpvar_14.z = worldNormal_4.x;
-				half3 tmpvar_15;
-				tmpvar_15.x = worldTangent_3.y;
-				tmpvar_15.y = tmpvar_13.y;
-				tmpvar_15.z = worldNormal_4.y;
-				half3 tmpvar_16;
-				tmpvar_16.x = worldTangent_3.z;
-				tmpvar_16.y = tmpvar_13.z;
-				tmpvar_16.z = worldNormal_4.z;
-				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
-				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
-				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
-				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
-				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
-				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
-				_mtl_o.xlv_COLOR0 = tmpvar_1;
-				return _mtl_o;
-			}
-
-			"
-		}
-		SubProgram "glcore " {
-			Keywords{ "POINT_COOKIE" }
-				"!!GL3x
-#ifdef VERTEX
-				#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			in  vec4 in_POSITION0;
-			in  vec4 in_TANGENT0;
-			in  vec3 in_NORMAL0;
-			in  vec4 in_TEXCOORD0;
-			in  vec4 in_TEXCOORD1;
-			in  vec4 in_COLOR0;
-			out vec4 vs_TEXCOORD0;
-			out vec3 vs_TEXCOORD1;
-			out vec3 vs_TEXCOORD2;
-			out vec3 vs_TEXCOORD3;
-			out vec3 vs_TEXCOORD4;
-			out vec4 vs_COLOR0;
-			vec4 t0;
-			vec3 t1;
-			vec3 t2;
-			float t3;
-			float t9;
-			void main()
-			{
-				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
-				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
-				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
-				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
-				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
-				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
-				t0.y = in_NORMAL0.x * _World2Object[0].x;
-				t0.z = in_NORMAL0.x * _World2Object[1].x;
-				t0.x = in_NORMAL0.x * _World2Object[2].x;
-				t1.y = in_NORMAL0.y * _World2Object[0].y;
-				t1.z = in_NORMAL0.y * _World2Object[1].y;
-				t1.x = in_NORMAL0.y * _World2Object[2].y;
-				t0.xyz = t0.xyz + t1.xyz;
-				t1.y = in_NORMAL0.z * _World2Object[0].z;
-				t1.z = in_NORMAL0.z * _World2Object[1].z;
-				t1.x = in_NORMAL0.z * _World2Object[2].z;
-				t0.xyz = t0.xyz + t1.xyz;
-				t9 = dot(t0.xyz, t0.xyz);
-				t9 = inversesqrt(t9);
-				t0.xyz = vec3(t9) * t0.xyz;
-				vs_TEXCOORD1.z = t0.y;
-				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
-				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
-				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
-				t9 = dot(t1.xyz, t1.xyz);
-				t9 = inversesqrt(t9);
-				t1.xyz = vec3(t9) * t1.xyz;
-				t2.xyz = t0.xyz * t1.xyz;
-				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
-				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
-				t2.xyz = vec3(t3) * t2.xyz;
-				vs_TEXCOORD1.y = t2.x;
-				vs_TEXCOORD1.x = t1.z;
-				vs_TEXCOORD2.z = t0.z;
-				vs_TEXCOORD3.z = t0.x;
-				vs_TEXCOORD2.x = t1.x;
-				vs_TEXCOORD3.x = t1.y;
-				vs_TEXCOORD2.y = t2.y;
-				vs_TEXCOORD3.y = t2.z;
-				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
-				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
-				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
-				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
-				vs_COLOR0 = in_COLOR0;
-				return;
-			}
-
-#endif
-#ifdef FRAGMENT
-			#version 150
-				#extension GL_ARB_shader_bit_encoding : enable
-				uniform 	vec4 _Time;
-			uniform 	vec4 _SinTime;
-			uniform 	vec4 _CosTime;
-			uniform 	vec4 unity_DeltaTime;
-			uniform 	vec3 _WorldSpaceCameraPos;
-			uniform 	vec4 _ProjectionParams;
-			uniform 	vec4 _ScreenParams;
-			uniform 	vec4 _ZBufferParams;
-			uniform 	vec4 unity_OrthoParams;
-			uniform 	vec4 unity_CameraWorldClipPlanes[6];
-			uniform 	mat4 unity_CameraProjection;
-			uniform 	mat4 unity_CameraInvProjection;
-			uniform 	vec4 _WorldSpaceLightPos0;
-			uniform 	vec4 _LightPositionRange;
-			uniform 	vec4 unity_4LightPosX0;
-			uniform 	vec4 unity_4LightPosY0;
-			uniform 	vec4 unity_4LightPosZ0;
-			uniform 	vec4 unity_4LightAtten0;
-			uniform 	vec4 unity_LightColor[8];
-			uniform 	vec4 unity_LightPosition[8];
-			uniform 	vec4 unity_LightAtten[8];
-			uniform 	vec4 unity_SpotDirection[8];
-			uniform 	vec4 unity_SHAr;
-			uniform 	vec4 unity_SHAg;
-			uniform 	vec4 unity_SHAb;
-			uniform 	vec4 unity_SHBr;
-			uniform 	vec4 unity_SHBg;
-			uniform 	vec4 unity_SHBb;
-			uniform 	vec4 unity_SHC;
-			uniform 	vec3 unity_LightColor0;
-			uniform 	vec3 unity_LightColor1;
-			uniform 	vec3 unity_LightColor2;
-			uniform 	vec3 unity_LightColor3;
-			uniform 	vec4 unity_ShadowSplitSpheres[4];
-			uniform 	vec4 unity_ShadowSplitSqRadii;
-			uniform 	vec4 unity_LightShadowBias;
-			uniform 	vec4 _LightSplitsNear;
-			uniform 	vec4 _LightSplitsFar;
-			uniform 	mat4 unity_World2Shadow[4];
-			uniform 	vec4 _LightShadowData;
-			uniform 	vec4 unity_ShadowFadeCenterAndType;
-			uniform 	mat4 glstate_matrix_mvp;
-			uniform 	mat4 glstate_matrix_modelview0;
-			uniform 	mat4 glstate_matrix_invtrans_modelview0;
-			uniform 	mat4 _Object2World;
-			uniform 	mat4 _World2Object;
-			uniform 	vec4 unity_LODFade;
-			uniform 	vec4 unity_WorldTransformParams;
-			uniform 	mat4 glstate_matrix_transpose_modelview0;
-			uniform 	mat4 glstate_matrix_projection;
-			uniform 	vec4 glstate_lightmodel_ambient;
-			uniform 	mat4 unity_MatrixV;
-			uniform 	mat4 unity_MatrixVP;
-			uniform 	vec4 unity_AmbientSky;
-			uniform 	vec4 unity_AmbientEquator;
-			uniform 	vec4 unity_AmbientGround;
-			uniform 	vec4 unity_FogColor;
-			uniform 	vec4 unity_FogParams;
-			uniform 	vec4 unity_LightmapST;
-			uniform 	vec4 unity_DynamicLightmapST;
-			uniform 	vec4 unity_SpecCube0_BoxMax;
-			uniform 	vec4 unity_SpecCube0_BoxMin;
-			uniform 	vec4 unity_SpecCube0_ProbePosition;
-			uniform 	vec4 unity_SpecCube0_HDR;
-			uniform 	vec4 unity_SpecCube1_BoxMax;
-			uniform 	vec4 unity_SpecCube1_BoxMin;
-			uniform 	vec4 unity_SpecCube1_ProbePosition;
-			uniform 	vec4 unity_SpecCube1_HDR;
-			uniform 	vec4 unity_ColorSpaceGrey;
-			uniform 	vec4 unity_ColorSpaceDouble;
-			uniform 	vec4 unity_ColorSpaceDielectricSpec;
-			uniform 	vec4 unity_ColorSpaceLuminance;
-			uniform 	vec4 unity_Lightmap_HDR;
-			uniform 	vec4 unity_DynamicLightmap_HDR;
-			uniform 	vec4 _LightColor0;
-			uniform 	vec4 _SpecColor;
-			uniform 	vec4 unity_LightGammaCorrectionConsts;
-			uniform 	mat4 _LightMatrix0;
-			uniform 	float _Shininess;
-			uniform 	float _Opacity;
-			uniform 	float _RimFalloff;
-			uniform 	vec4 _RimColor;
-			uniform 	vec4 _MainTex_ST;
-			uniform 	vec4 _Emissive_ST;
-			uniform  sampler2D _MainTex;
-			uniform  sampler2D _Emissive;
-			uniform  sampler2D _LightTextureB0;
-			uniform  samplerCube _LightTexture0;
-			in  vec4 vs_TEXCOORD0;
-			in  vec3 vs_TEXCOORD1;
-			in  vec3 vs_TEXCOORD2;
-			in  vec3 vs_TEXCOORD3;
-			in  vec3 vs_TEXCOORD4;
-			in  vec4 vs_COLOR0;
-			out vec4 SV_Target0;
-			vec3 t0;
-			vec4 t1;
-			lowp vec4 t10_1;
-			vec4 t2;
-			lowp vec4 t10_2;
-			vec3 t3;
-			lowp vec4 t10_3;
-			vec3 t4;
-			float t5;
-			vec2 t8;
-			float t9;
-			float t12;
-			mediump float t16_12;
-			float t13;
-			void main()
-			{
-				t0.x = vs_TEXCOORD0.z * 3.0;
-				t0.x = t0.x;
-				t0.x = clamp(t0.x, 0.0, 1.0);
-				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
-				t2.yw = t1.yw;
-				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
-				t2.xz = t10_3.yw;
-				t1.yw = t10_3.xz;
-				t2 = (-t1.yxwz) + t2;
-				t0.xy = t0.xx * t2.xy + t1.yx;
-				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
-				t8.xy = clamp(t8.xy, 0.0, 1.0);
-				t1.xy = t8.xx * t2.zw + t1.wz;
-				t1.xy = (-t0.xy) + t1.xy;
-				t0.xy = t8.yy * t1.xy + t0.xy;
-				t8.x = t0.y * t0.y;
-				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
-				t8.x = t1.x * t8.x + t0.y;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
-				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
-				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
-				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
-				t1.xzw = (-t0.yyy) + t1.xzw;
-				t8.x = vs_COLOR0.w;
-				t8.x = clamp(t8.x, 0.0, 1.0);
-				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = vec3(t13) * t1.xyz;
-				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = vec3(t13) * t2.xyz;
-				t3.x = vs_TEXCOORD1.z;
-				t3.y = vs_TEXCOORD2.z;
-				t3.z = vs_TEXCOORD3.z;
-				t13 = dot(t3.xyz, t3.xyz);
-				t13 = inversesqrt(t13);
-				t3.xyz = vec3(t13) * t3.xyz;
-				t1.w = dot(t3.xyz, t2.xyz);
-				t1.x = dot(t3.xyz, t1.xyz);
-				t1.xy = max(t1.xw, vec2(0.0, 0.0));
-				t5 = log2(t1.y);
-				t9 = _Shininess * 128.0;
-				t5 = t5 * t9;
-				t5 = exp2(t5);
-				t0.x = t0.x * t5;
-				t0.xyz = t4.xyz * t1.xxx + t0.xxx;
-				t0.xyz = t0.xyz * _LightColor0.xyz;
-				t1.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
-				t1.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t1.xyz;
-				t1.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t1.xyz;
-				t1.xyz = t1.xyz + _LightMatrix0[3].xyz;
-				t12 = dot(t1.xyz, t1.xyz);
-				t10_1 = texture(_LightTexture0, t1.xyz);
-				t10_2 = texture(_LightTextureB0, vec2(t12));
-				t16_12 = t10_1.w * t10_2.w;
-				SV_Target0.xyz = vec3(t16_12) * t0.xyz;
-				SV_Target0.w = 1.0;
-				return;
-			}
-
-#endif
-			"
-		}
-		SubProgram "opengl " {
-			// Stats: 43 math, 3 textures
-			Keywords{ "DIRECTIONAL_COOKIE" }
-				"!!GLSL#version 120
-
-#ifdef VERTEX
-
-				uniform mat4 _Object2World;
-			uniform mat4 _World2Object;
-			uniform vec4 unity_WorldTransformParams;
-			uniform vec4 _MainTex_ST;
-			uniform vec4 _Emissive_ST;
-			attribute vec4 TANGENT;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec4 tmpvar_1;
-				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
-				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
-				vec4 v_2;
-				v_2.x = _World2Object[0].x;
-				v_2.y = _World2Object[1].x;
-				v_2.z = _World2Object[2].x;
-				v_2.w = _World2Object[3].x;
-				vec4 v_3;
-				v_3.x = _World2Object[0].y;
-				v_3.y = _World2Object[1].y;
-				v_3.z = _World2Object[2].y;
-				v_3.w = _World2Object[3].y;
-				vec4 v_4;
-				v_4.x = _World2Object[0].z;
-				v_4.y = _World2Object[1].z;
-				v_4.z = _World2Object[2].z;
-				v_4.w = _World2Object[3].z;
-				vec3 tmpvar_5;
-				tmpvar_5 = normalize(((
-					(v_2.xyz * gl_Normal.x)
-					+
-					(v_3.xyz * gl_Normal.y)
-					) + (v_4.xyz * gl_Normal.z)));
-				mat3 tmpvar_6;
-				tmpvar_6[0] = _Object2World[0].xyz;
-				tmpvar_6[1] = _Object2World[1].xyz;
-				tmpvar_6[2] = _Object2World[2].xyz;
-				vec3 tmpvar_7;
-				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
-				vec3 tmpvar_8;
-				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
-				vec3 tmpvar_9;
-				tmpvar_9.x = tmpvar_7.x;
-				tmpvar_9.y = tmpvar_8.x;
-				tmpvar_9.z = tmpvar_5.x;
-				vec3 tmpvar_10;
-				tmpvar_10.x = tmpvar_7.y;
-				tmpvar_10.y = tmpvar_8.y;
-				tmpvar_10.z = tmpvar_5.y;
-				vec3 tmpvar_11;
-				tmpvar_11.x = tmpvar_7.z;
-				tmpvar_11.y = tmpvar_8.z;
-				tmpvar_11.z = tmpvar_5.z;
-				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
-				xlv_TEXCOORD0 = tmpvar_1;
-				xlv_TEXCOORD1 = tmpvar_9;
-				xlv_TEXCOORD2 = tmpvar_10;
-				xlv_TEXCOORD3 = tmpvar_11;
-				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
-				xlv_COLOR0 = gl_Color;
-			}
-
-
-#endif
-#ifdef FRAGMENT
-			uniform vec3 _WorldSpaceCameraPos;
-			uniform vec4 _WorldSpaceLightPos0;
-			uniform vec4 _LightColor0;
-			uniform sampler2D _LightTexture0;
-			uniform mat4 _LightMatrix0;
-			uniform float _Shininess;
-			uniform sampler2D _MainTex;
-			uniform sampler2D _Emissive;
-			varying vec4 xlv_TEXCOORD0;
-			varying vec3 xlv_TEXCOORD1;
-			varying vec3 xlv_TEXCOORD2;
-			varying vec3 xlv_TEXCOORD3;
-			varying vec3 xlv_TEXCOORD4;
-			varying vec4 xlv_COLOR0;
-			void main()
-			{
-				vec3 worldN_1;
-				vec4 c_2;
+				vec3 tmpvar_2;
+				tmpvar_2 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
 				vec4 tmpvar_3;
 				tmpvar_3 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
 				vec4 tmpvar_4;
@@ -13410,27 +8594,5364 @@ Shader "KSP/Specular Layered" {
 				vec4 tmpvar_11;
 				tmpvar_11.w = 1.0;
 				tmpvar_11.xyz = xlv_TEXCOORD4;
+				vec3 tmpvar_12;
+				tmpvar_12 = (_LightMatrix0 * tmpvar_11).xyz;
+				float tmpvar_13;
+				tmpvar_13 = texture2D (_LightTexture0, vec2(dot(tmpvar_12, tmpvar_12))).w;
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				vec4 c_14;
+				vec3 tmpvar_15;
+				tmpvar_15 = normalize(worldN_1);
+				float tmpvar_16;
+				tmpvar_16 = (pow(max(0.0,
+					dot(tmpvar_15, normalize((tmpvar_2 + normalize(
+					(_WorldSpaceCameraPos - xlv_TEXCOORD4)
+					))))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_9.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_9.y));
+				c_14.xyz = ((_LightColor0.xyz * (
+					((mix(tmpvar_9.xxx, mix(
+						mix(vec3(clamp((tmpvar_9.x + (
+						(1.0 - tmpvar_9.y)
+							*
+							(tmpvar_9.x * tmpvar_9.x)
+							)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_9.yyy)
+						, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz) * max(0.0, dot(tmpvar_15, tmpvar_2)))
+					+
+					(tmpvar_16 * _SpecColor.xyz)
+					)) * tmpvar_13);
+				c_14.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_16 * tmpvar_13)));
+				gl_FragData[0] = c_14;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "d3d9 " {
+			// Stats: 35 math
+			Keywords{ "POINT" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				Matrix 4[_Object2World] 3
+				Matrix 7[_World2Object] 3
+				Matrix 0[glstate_matrix_mvp]
+				Vector 12[_Emissive_ST]
+				Vector 11[_MainTex_ST]
+				Vector 10[unity_WorldTransformParams]
+				"vs_3_0
+				dcl_position v0
+				dcl_tangent v1
+				dcl_normal v2
+				dcl_texcoord v3
+				dcl_texcoord1 v4
+				dcl_color v5
+				dcl_position o0
+				dcl_texcoord o1
+				dcl_texcoord1 o2.xyz
+				dcl_texcoord2 o3.xyz
+				dcl_texcoord3 o4.xyz
+				dcl_texcoord4 o5.xyz
+				dcl_color o6
+				dp4 o0.x, c0, v0
+				dp4 o0.y, c1, v0
+				dp4 o0.z, c2, v0
+				dp4 o0.w, c3, v0
+				mad o1.xy, v3, c11, c11.zwzw
+				mad o1.zw, v4.xyxy, c12.xyxy, c12
+				dp4 o5.x, c4, v0
+				dp4 o5.y, c5, v0
+				dp4 o5.z, c6, v0
+				dp3 r0.z, c4, v1
+				dp3 r0.x, c5, v1
+				dp3 r0.y, c6, v1
+				dp3 r0.w, r0, r0
+				rsq r0.w, r0.w
+				mul r0.xyz, r0.w, r0
+				mov o2.x, r0.z
+				mul r1.xyz, c8.zxyw, v2.y
+				mad r1.xyz, c7.zxyw, v2.x, r1
+				mad r1.xyz, c9.zxyw, v2.z, r1
+				dp3 r0.w, r1, r1
+				rsq r0.w, r0.w
+				mul r1.xyz, r0.w, r1
+				mul r2.xyz, r0, r1
+				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
+				mul r0.z, c10.w, v1.w
+				mul r2.xyz, r0.z, r2
+				mov o2.y, r2.x
+				mov o2.z, r1.y
+				mov o3.x, r0.x
+				mov o4.x, r0.y
+				mov o3.y, r2.y
+				mov o4.y, r2.z
+				mov o3.z, r1.z
+				mov o4.z, r1.x
+				mov o6, v5
+
+				"
+		}
+		SubProgram "d3d11 " {
+			// Stats: 34 math
+			Keywords{ "POINT" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				ConstBuffer "$Globals" 304
+				Vector 272[_MainTex_ST]
+				Vector 288[_Emissive_ST]
+				ConstBuffer "UnityPerDraw" 352
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 192[_Object2World]
+				Matrix 256[_World2Object]
+				Vector 336[unity_WorldTransformParams]
+				BindCB  "$Globals" 0
+				BindCB  "UnityPerDraw" 1
+				"vs_4_0
+				root12:aaacaaaa
+				eefiecedgdmnpmfdjmlgkfdjcbocadegflimgmfgabaaaaaaaeaiaaaaadaaaaaa
+				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
+				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
+				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
+				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
+				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
+				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
+				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
+				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
+				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
+				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
+				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
+				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
+				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
+				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
+				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabdaaaaaafjaaaaaeegiocaaa
+				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
+				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
+				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
+				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
+				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
+				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
+				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
+				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
+				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
+				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
+				aaaaaaaabbaaaaaaogikcaaaaaaaaaaabbaaaaaadcaaaaalmccabaaaabaaaaaa
+				agbebaaaaeaaaaaaagiecaaaaaaaaaaabcaaaaaakgiocaaaaaaaaaaabcaaaaaa
+				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
+				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
+				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
+				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
+				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
+				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
+				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
+				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
+				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
+				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
+				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
+				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
+				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
+				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
+				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
+				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
+				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
+				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
+				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
+				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
+				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
+				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
+				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
+				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
+				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
+				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
+				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
+				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
+				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
+				doaaaaab"
+		}
+		SubProgram "gles " {
+			// Stats: 50 math, 3 textures
+			Keywords{ "POINT" }
+				"!!GLES
+				#version 100
+
+#ifdef VERTEX
+				attribute vec4 _glesTANGENT;
+			attribute vec4 _glesVertex;
+			attribute vec4 _glesColor;
+			attribute vec3 _glesNormal;
+			attribute vec4 _glesMultiTexCoord0;
+			attribute vec4 _glesMultiTexCoord1;
+			uniform highp mat4 glstate_matrix_mvp;
+			uniform highp mat4 _Object2World;
+			uniform highp mat4 _World2Object;
+			uniform highp vec4 unity_WorldTransformParams;
+			uniform highp vec4 _MainTex_ST;
+			uniform highp vec4 _Emissive_ST;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp float tangentSign_1;
+				lowp vec3 worldTangent_2;
+				lowp vec3 worldNormal_3;
+				highp vec4 tmpvar_4;
+				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				highp vec4 v_5;
+				v_5.x = _World2Object[0].x;
+				v_5.y = _World2Object[1].x;
+				v_5.z = _World2Object[2].x;
+				v_5.w = _World2Object[3].x;
+				highp vec4 v_6;
+				v_6.x = _World2Object[0].y;
+				v_6.y = _World2Object[1].y;
+				v_6.z = _World2Object[2].y;
+				v_6.w = _World2Object[3].y;
+				highp vec4 v_7;
+				v_7.x = _World2Object[0].z;
+				v_7.y = _World2Object[1].z;
+				v_7.z = _World2Object[2].z;
+				v_7.w = _World2Object[3].z;
+				highp vec3 tmpvar_8;
+				tmpvar_8 = normalize(((
+					(v_5.xyz * _glesNormal.x)
+					+
+					(v_6.xyz * _glesNormal.y)
+					) + (v_7.xyz * _glesNormal.z)));
+				worldNormal_3 = tmpvar_8;
+				highp mat3 tmpvar_9;
+				tmpvar_9[0] = _Object2World[0].xyz;
+				tmpvar_9[1] = _Object2World[1].xyz;
+				tmpvar_9[2] = _Object2World[2].xyz;
+				highp vec3 tmpvar_10;
+				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
+				worldTangent_2 = tmpvar_10;
+				highp float tmpvar_11;
+				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
+				tangentSign_1 = tmpvar_11;
+				lowp vec3 tmpvar_12;
+				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
+				lowp vec3 tmpvar_13;
+				tmpvar_13.x = worldTangent_2.x;
+				tmpvar_13.y = tmpvar_12.x;
+				tmpvar_13.z = worldNormal_3.x;
+				lowp vec3 tmpvar_14;
+				tmpvar_14.x = worldTangent_2.y;
+				tmpvar_14.y = tmpvar_12.y;
+				tmpvar_14.z = worldNormal_3.y;
+				lowp vec3 tmpvar_15;
+				tmpvar_15.x = worldTangent_2.z;
+				tmpvar_15.y = tmpvar_12.z;
+				tmpvar_15.z = worldNormal_3.z;
+				gl_Position = (glstate_matrix_mvp * _glesVertex);
+				xlv_TEXCOORD0 = tmpvar_4;
+				xlv_TEXCOORD1 = tmpvar_13;
+				xlv_TEXCOORD2 = tmpvar_14;
+				xlv_TEXCOORD3 = tmpvar_15;
+				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
+				xlv_COLOR0 = _glesColor;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform highp vec3 _WorldSpaceCameraPos;
+			uniform highp vec4 _WorldSpaceLightPos0;
+			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
+			uniform sampler2D _LightTexture0;
+			uniform mediump mat4 _LightMatrix0;
+			uniform mediump float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform highp float _Opacity;
+			uniform highp vec4 _BurnColor;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp vec3 worldN_1;
+				lowp vec3 worldViewDir_2;
+				lowp vec3 lightDir_3;
+				highp vec4 tmpvar_4;
+				highp vec3 tmpvar_5;
+				tmpvar_5 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
+				lightDir_3 = tmpvar_5;
+				highp vec3 tmpvar_6;
+				tmpvar_6 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
+				worldViewDir_2 = tmpvar_6;
+				tmpvar_4 = xlv_COLOR0;
+				lowp vec3 tmpvar_7;
+				lowp float tmpvar_8;
+				lowp float tmpvar_9;
+				highp vec4 mask_10;
+				highp vec4 color_11;
+				lowp vec4 tmpvar_12;
+				tmpvar_12 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_11 = tmpvar_12;
+				lowp vec4 tmpvar_13;
+				tmpvar_13 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_10 = tmpvar_13;
+				highp vec2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
+				highp vec2 tmpvar_15;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
+				highp vec2 tmpvar_16;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
+				highp vec2 tmpvar_17;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
+				highp vec2 tmpvar_18;
+				highp float tmpvar_19;
+				tmpvar_19 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, vec2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, vec2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				highp vec3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(vec3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+				), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = (tmpvar_20 * _BurnColor.xyz);
+				highp float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = ((tmpvar_21 + 0.2) * tmpvar_18.y);
+				tmpvar_9 = _Opacity;
+				highp vec4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = xlv_TEXCOORD4;
+				highp vec3 tmpvar_23;
+				tmpvar_23 = (_LightMatrix0 * tmpvar_22).xyz;
+				highp float tmpvar_24;
+				tmpvar_24 = dot(tmpvar_23, tmpvar_23);
+				lowp float tmpvar_25;
+				tmpvar_25 = texture2D (_LightTexture0, vec2(tmpvar_24)).w;
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				mediump vec3 lightDir_26;
+				lightDir_26 = lightDir_3;
+				mediump vec3 viewDir_27;
+				viewDir_27 = worldViewDir_2;
+				mediump float atn_28;
+				atn_28 = tmpvar_25;
+				lowp vec4 c_29;
+				lowp float spec_30;
+				lowp float diff_31;
+				lowp vec3 halfDir_32;
+				lowp vec3 tmpvar_33;
+				tmpvar_33 = normalize(worldN_1);
+				mediump vec3 tmpvar_34;
+				tmpvar_34 = normalize((lightDir_26 + viewDir_27));
+				halfDir_32 = tmpvar_34;
+				mediump float tmpvar_35;
+				tmpvar_35 = max(0.0, dot(tmpvar_33, lightDir_26));
+				diff_31 = tmpvar_35;
+				lowp float tmpvar_36;
+				tmpvar_36 = max(0.0, dot(tmpvar_33, halfDir_32));
+				mediump float tmpvar_37;
+				tmpvar_37 = (pow(tmpvar_36, (_Shininess * 128.0)) * tmpvar_8);
+				spec_30 = tmpvar_37;
+				c_29.xyz = ((_LightColor0.xyz * (
+					(tmpvar_7 * diff_31)
+					+
+					(spec_30 * _SpecColor.xyz)
+					)) * atn_28);
+				c_29.w = (tmpvar_9 + ((_LightColor0.w * _SpecColor.w) * (spec_30 * atn_28)));
+				gl_FragData[0] = c_29;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "gles3 " {
+			Keywords{ "POINT" }
+				"!!GLES3
+#ifdef VERTEX
+				#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in highp vec4 in_POSITION0;
+			in highp vec4 in_TANGENT0;
+			in highp vec3 in_NORMAL0;
+			in highp vec4 in_TEXCOORD0;
+			in highp vec4 in_TEXCOORD1;
+			in lowp vec4 in_COLOR0;
+			out highp vec4 vs_TEXCOORD0;
+			out lowp vec3 vs_TEXCOORD1;
+			out lowp vec3 vs_TEXCOORD2;
+			out lowp vec3 vs_TEXCOORD3;
+			out highp vec3 vs_TEXCOORD4;
+			out lowp vec4 vs_COLOR0;
+			highp vec4 t0;
+			highp vec3 t1;
+			lowp vec3 t10_2;
+			highp float t3;
+			highp float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t10_2.xyz = t0.xyz * t1.xyz;
+				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t10_2.xyz = vec3(t3) * t10_2.xyz;
+				vs_TEXCOORD1.y = t10_2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t10_2.y;
+				vs_TEXCOORD3.y = t10_2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform lowp sampler2D _MainTex;
+			uniform lowp sampler2D _Emissive;
+			uniform lowp sampler2D _LightTexture0;
+			in highp vec4 vs_TEXCOORD0;
+			in lowp vec3 vs_TEXCOORD1;
+			in lowp vec3 vs_TEXCOORD2;
+			in lowp vec3 vs_TEXCOORD3;
+			in highp vec3 vs_TEXCOORD4;
+			in lowp vec4 vs_COLOR0;
+			layout(location = 0) out lowp vec4 SV_Target0;
+			highp vec2 t0;
+			mediump float t16_0;
+			lowp float t10_0;
+			highp vec4 t1;
+			mediump vec4 t16_1;
+			highp vec4 t2;
+			lowp vec4 t10_3;
+			mediump vec4 t16_4;
+			lowp vec3 t10_5;
+			highp vec3 t6;
+			mediump float t16_10;
+			highp vec2 t12;
+			mediump float t16_12;
+			mediump float t16_16;
+			highp float t19;
+			mediump float t16_22;
+			lowp float t10_23;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t12.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t12.xy = clamp(t12.xy, 0.0, 1.0);
+				t1.xy = t12.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t12.yy * t1.xy + t0.xy;
+				t12.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t12.x = t1.x * t12.x + t0.y;
+				t12.x = clamp(t12.x, 0.0, 1.0);
+				t1.xzw = (-t12.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t12.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t16_12 = vs_COLOR0.w;
+				t16_12 = clamp(t16_12, 0.0, 1.0);
+				t6.xyz = vec3(t16_12) * t1.xzw + t0.yyy;
+				t6.xyz = t6.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t19 = dot(t1.xyz, t1.xyz);
+				t19 = inversesqrt(t19);
+				t1.xyz = vec3(t19) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t19 = dot(t2.xyz, t2.xyz);
+				t19 = inversesqrt(t19);
+				t16_4.xyz = t2.xyz * vec3(t19) + t1.xyz;
+				t16_22 = dot(t16_4.xyz, t16_4.xyz);
+				t16_22 = inversesqrt(t16_22);
+				t16_4.xyz = vec3(t16_22) * t16_4.xyz;
+				t10_5.x = vs_TEXCOORD1.z;
+				t10_5.y = vs_TEXCOORD2.z;
+				t10_5.z = vs_TEXCOORD3.z;
+				t10_23 = dot(t10_5.xyz, t10_5.xyz);
+				t10_23 = inversesqrt(t10_23);
+				t10_5.xyz = vec3(t10_23) * t10_5.xyz;
+				t10_23 = dot(t10_5.xyz, t16_4.xyz);
+				t16_4.x = dot(t10_5.xyz, t1.xyz);
+				t16_4.x = max(t16_4.x, 0.0);
+				t10_5.x = max(t10_23, 0.0);
+				t16_10 = log2(t10_5.x);
+				t16_16 = _Shininess * 128.0;
+				t16_10 = t16_10 * t16_16;
+				t16_10 = exp2(t16_10);
+				t16_10 = t0.x * t16_10;
+				t10_5.xyz = vec3(t16_10) * _SpecColor.xyz;
+				t10_5.xyz = t6.xyz * t16_4.xxx + t10_5.xyz;
+				t10_5.xyz = t10_5.xyz * _LightColor0.xyz;
+				t16_4.xzw = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
+				t16_4.xzw = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t16_4.xzw;
+				t16_4.xzw = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t16_4.xzw;
+				t16_4.xzw = t16_4.xzw + _LightMatrix0[3].xyz;
+				t16_0 = dot(t16_4.xzw, t16_4.xzw);
+				t10_0 = texture(_LightTexture0, vec2(t16_0)).w;
+				t16_1.xyz = vec3(t10_0) * t10_5.xyz;
+				t10_5.x = _LightColor0.w * _SpecColor.w;
+				t10_5.x = t16_10 * t10_5.x;
+				t16_1.w = t10_5.x * t10_0 + _Opacity;
+				SV_Target0 = t16_1;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "metal " {
+			// Stats: 19 math
+			Keywords{ "POINT" }
+				Bind "tangent" ATTR0
+				Bind "vertex" ATTR1
+				Bind "color" ATTR2
+				Bind "normal" ATTR3
+				Bind "texcoord" ATTR4
+				Bind "texcoord1" ATTR5
+				ConstBuffer "$Globals" 240
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 64[_Object2World]
+				Matrix 128[_World2Object]
+				Vector 192[unity_WorldTransformParams]
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
+				"metal_vs
+#include <metal_stdlib>
+				using namespace metal;
+			struct xlatMtlShaderInput {
+				float4 _glesTANGENT[[attribute(0)]];
+				float4 _glesVertex[[attribute(1)]];
+				float4 _glesColor[[attribute(2)]];
+				float3 _glesNormal[[attribute(3)]];
+				float4 _glesMultiTexCoord0[[attribute(4)]];
+				float4 _glesMultiTexCoord1[[attribute(5)]];
+			};
+			struct xlatMtlShaderOutput {
+				float4 gl_Position[[position]];
+				float4 xlv_TEXCOORD0;
+				half3 xlv_TEXCOORD1;
+				half3 xlv_TEXCOORD2;
+				half3 xlv_TEXCOORD3;
+				float3 xlv_TEXCOORD4;
+				half4 xlv_COLOR0;
+			};
+			struct xlatMtlShaderUniform {
+				float4x4 glstate_matrix_mvp;
+				float4x4 _Object2World;
+				float4x4 _World2Object;
+				float4 unity_WorldTransformParams;
+				float4 _MainTex_ST;
+				float4 _Emissive_ST;
+			};
+			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
+			{
+				xlatMtlShaderOutput _mtl_o;
+				half4 tmpvar_1;
+				tmpvar_1 = half4(_mtl_i._glesColor);
+				half tangentSign_2;
+				half3 worldTangent_3;
+				half3 worldNormal_4;
+				float4 tmpvar_5;
+				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
+				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
+				float4 v_6;
+				v_6.x = _mtl_u._World2Object[0].x;
+				v_6.y = _mtl_u._World2Object[1].x;
+				v_6.z = _mtl_u._World2Object[2].x;
+				v_6.w = _mtl_u._World2Object[3].x;
+				float4 v_7;
+				v_7.x = _mtl_u._World2Object[0].y;
+				v_7.y = _mtl_u._World2Object[1].y;
+				v_7.z = _mtl_u._World2Object[2].y;
+				v_7.w = _mtl_u._World2Object[3].y;
+				float4 v_8;
+				v_8.x = _mtl_u._World2Object[0].z;
+				v_8.y = _mtl_u._World2Object[1].z;
+				v_8.z = _mtl_u._World2Object[2].z;
+				v_8.w = _mtl_u._World2Object[3].z;
+				float3 tmpvar_9;
+				tmpvar_9 = normalize(((
+					(v_6.xyz * _mtl_i._glesNormal.x)
+					+
+					(v_7.xyz * _mtl_i._glesNormal.y)
+					) + (v_8.xyz * _mtl_i._glesNormal.z)));
+				worldNormal_4 = half3(tmpvar_9);
+				float3x3 tmpvar_10;
+				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
+				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
+				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
+				float3 tmpvar_11;
+				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
+				worldTangent_3 = half3(tmpvar_11);
+				float tmpvar_12;
+				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
+				tangentSign_2 = half(tmpvar_12);
+				half3 tmpvar_13;
+				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
+				half3 tmpvar_14;
+				tmpvar_14.x = worldTangent_3.x;
+				tmpvar_14.y = tmpvar_13.x;
+				tmpvar_14.z = worldNormal_4.x;
+				half3 tmpvar_15;
+				tmpvar_15.x = worldTangent_3.y;
+				tmpvar_15.y = tmpvar_13.y;
+				tmpvar_15.z = worldNormal_4.y;
+				half3 tmpvar_16;
+				tmpvar_16.x = worldTangent_3.z;
+				tmpvar_16.y = tmpvar_13.z;
+				tmpvar_16.z = worldNormal_4.z;
+				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
+				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
+				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
+				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
+				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
+				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
+				_mtl_o.xlv_COLOR0 = tmpvar_1;
+				return _mtl_o;
+			}
+
+			"
+		}
+		SubProgram "glcore " {
+			Keywords{ "POINT" }
+				"!!GL3x
+#ifdef VERTEX
+				#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in  vec4 in_POSITION0;
+			in  vec4 in_TANGENT0;
+			in  vec3 in_NORMAL0;
+			in  vec4 in_TEXCOORD0;
+			in  vec4 in_TEXCOORD1;
+			in  vec4 in_COLOR0;
+			out vec4 vs_TEXCOORD0;
+			out vec3 vs_TEXCOORD1;
+			out vec3 vs_TEXCOORD2;
+			out vec3 vs_TEXCOORD3;
+			out vec3 vs_TEXCOORD4;
+			out vec4 vs_COLOR0;
+			vec4 t0;
+			vec3 t1;
+			vec3 t2;
+			float t3;
+			float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t2.xyz = t0.xyz * t1.xyz;
+				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t2.xyz = vec3(t3) * t2.xyz;
+				vs_TEXCOORD1.y = t2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t2.y;
+				vs_TEXCOORD3.y = t2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform  sampler2D _MainTex;
+			uniform  sampler2D _Emissive;
+			uniform  sampler2D _LightTexture0;
+			in  vec4 vs_TEXCOORD0;
+			in  vec3 vs_TEXCOORD1;
+			in  vec3 vs_TEXCOORD2;
+			in  vec3 vs_TEXCOORD3;
+			in  vec3 vs_TEXCOORD4;
+			in  vec4 vs_COLOR0;
+			out vec4 SV_Target0;
+			vec2 t0;
+			vec4 t1;
+			lowp vec4 t10_1;
+			vec4 t2;
+			vec3 t3;
+			lowp vec4 t10_3;
+			vec3 t4;
+			vec3 t5;
+			vec2 t8;
+			float t9;
+			float t13;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t8.xy = clamp(t8.xy, 0.0, 1.0);
+				t1.xy = t8.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t8.yy * t1.xy + t0.xy;
+				t8.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t8.x = t1.x * t8.x + t0.y;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t8.x = vs_COLOR0.w;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t13 = dot(t1.xyz, t1.xyz);
+				t13 = inversesqrt(t13);
+				t1.xyz = vec3(t13) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = vec3(t13) * t2.xyz;
+				t3.x = vs_TEXCOORD1.z;
+				t3.y = vs_TEXCOORD2.z;
+				t3.z = vs_TEXCOORD3.z;
+				t13 = dot(t3.xyz, t3.xyz);
+				t13 = inversesqrt(t13);
+				t3.xyz = vec3(t13) * t3.xyz;
+				t1.w = dot(t3.xyz, t2.xyz);
+				t1.x = dot(t3.xyz, t1.xyz);
+				t1.xy = max(t1.xw, vec2(0.0, 0.0));
+				t5.x = log2(t1.y);
+				t9 = _Shininess * 128.0;
+				t5.x = t5.x * t9;
+				t5.x = exp2(t5.x);
+				t0.x = t0.x * t5.x;
+				t5.xyz = t0.xxx * _SpecColor.xyz;
+				t4.xyz = t4.xyz * t1.xxx + t5.xyz;
+				t4.xyz = t4.xyz * _LightColor0.xyz;
+				t1.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
+				t1.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t1.xyz;
+				t1.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t1.xyz;
+				t1.xyz = t1.xyz + _LightMatrix0[3].xyz;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t10_1 = texture(_LightTexture0, t1.xx);
+				SV_Target0.xyz = t4.xyz * t10_1.www;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t4.x;
+				SV_Target0.w = t0.x * t10_1.w + _Opacity;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "opengl " {
+			// Stats: 43 math, 2 textures
+			Keywords{ "DIRECTIONAL" }
+				"!!GLSL#version 120
+
+#ifdef VERTEX
+
+				uniform mat4 _Object2World;
+			uniform mat4 _World2Object;
+			uniform vec4 unity_WorldTransformParams;
+			uniform vec4 _MainTex_ST;
+			uniform vec4 _Emissive_ST;
+			attribute vec4 TANGENT;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec4 tmpvar_1;
+				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				vec4 v_2;
+				v_2.x = _World2Object[0].x;
+				v_2.y = _World2Object[1].x;
+				v_2.z = _World2Object[2].x;
+				v_2.w = _World2Object[3].x;
+				vec4 v_3;
+				v_3.x = _World2Object[0].y;
+				v_3.y = _World2Object[1].y;
+				v_3.z = _World2Object[2].y;
+				v_3.w = _World2Object[3].y;
+				vec4 v_4;
+				v_4.x = _World2Object[0].z;
+				v_4.y = _World2Object[1].z;
+				v_4.z = _World2Object[2].z;
+				v_4.w = _World2Object[3].z;
+				vec3 tmpvar_5;
+				tmpvar_5 = normalize(((
+					(v_2.xyz * gl_Normal.x)
+					+
+					(v_3.xyz * gl_Normal.y)
+					) + (v_4.xyz * gl_Normal.z)));
+				mat3 tmpvar_6;
+				tmpvar_6[0] = _Object2World[0].xyz;
+				tmpvar_6[1] = _Object2World[1].xyz;
+				tmpvar_6[2] = _Object2World[2].xyz;
+				vec3 tmpvar_7;
+				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
+				vec3 tmpvar_8;
+				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
+				vec3 tmpvar_9;
+				tmpvar_9.x = tmpvar_7.x;
+				tmpvar_9.y = tmpvar_8.x;
+				tmpvar_9.z = tmpvar_5.x;
+				vec3 tmpvar_10;
+				tmpvar_10.x = tmpvar_7.y;
+				tmpvar_10.y = tmpvar_8.y;
+				tmpvar_10.z = tmpvar_5.y;
+				vec3 tmpvar_11;
+				tmpvar_11.x = tmpvar_7.z;
+				tmpvar_11.y = tmpvar_8.z;
+				tmpvar_11.z = tmpvar_5.z;
+				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
+				xlv_TEXCOORD0 = tmpvar_1;
+				xlv_TEXCOORD1 = tmpvar_9;
+				xlv_TEXCOORD2 = tmpvar_10;
+				xlv_TEXCOORD3 = tmpvar_11;
+				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
+				xlv_COLOR0 = gl_Color;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform vec3 _WorldSpaceCameraPos;
+			uniform vec4 _WorldSpaceLightPos0;
+			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
+			uniform float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform float _Opacity;
+			uniform vec4 _BurnColor;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec3 worldN_1;
+				vec4 tmpvar_2;
+				tmpvar_2 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_3;
+				tmpvar_3 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				vec2 tmpvar_4;
+				tmpvar_4.x = tmpvar_2.x;
+				tmpvar_4.y = tmpvar_3.x;
+				vec2 tmpvar_5;
+				tmpvar_5.x = tmpvar_2.y;
+				tmpvar_5.y = tmpvar_3.y;
+				vec2 tmpvar_6;
+				tmpvar_6.x = tmpvar_2.z;
+				tmpvar_6.y = tmpvar_3.z;
+				vec2 tmpvar_7;
+				tmpvar_7.x = tmpvar_2.w;
+				tmpvar_7.y = tmpvar_3.w;
+				vec2 tmpvar_8;
+				float tmpvar_9;
+				tmpvar_9 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_8 = mix(mix(tmpvar_4, tmpvar_5, vec2(clamp(tmpvar_9, 0.0, 1.0))), mix(tmpvar_6, tmpvar_7, vec2(clamp(
+					(tmpvar_9 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_9 - 1.0), 0.0, 1.0)));
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				vec4 c_10;
+				vec3 tmpvar_11;
+				tmpvar_11 = normalize(worldN_1);
+				float tmpvar_12;
+				tmpvar_12 = (pow(max(0.0,
+					dot(tmpvar_11, normalize((_WorldSpaceLightPos0.xyz + normalize(
+					(_WorldSpaceCameraPos - xlv_TEXCOORD4)
+					))))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_8.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_8.y));
+				c_10.xyz = (_LightColor0.xyz * ((
+					(mix(tmpvar_8.xxx, mix(mix(vec3(
+						clamp((tmpvar_8.x + ((1.0 - tmpvar_8.y) * (tmpvar_8.x * tmpvar_8.x))), 0.0, 1.0)
+					), xlv_COLOR0.xyz, tmpvar_8.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz)
+					*
+					max(0.0, dot(tmpvar_11, _WorldSpaceLightPos0.xyz))
+					) + (tmpvar_12 * _SpecColor.xyz)));
+				c_10.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * tmpvar_12));
+				gl_FragData[0] = c_10;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "d3d9 " {
+			// Stats: 35 math
+			Keywords{ "DIRECTIONAL" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				Matrix 4[_Object2World] 3
+				Matrix 7[_World2Object] 3
+				Matrix 0[glstate_matrix_mvp]
+				Vector 12[_Emissive_ST]
+				Vector 11[_MainTex_ST]
+				Vector 10[unity_WorldTransformParams]
+				"vs_3_0
+				dcl_position v0
+				dcl_tangent v1
+				dcl_normal v2
+				dcl_texcoord v3
+				dcl_texcoord1 v4
+				dcl_color v5
+				dcl_position o0
+				dcl_texcoord o1
+				dcl_texcoord1 o2.xyz
+				dcl_texcoord2 o3.xyz
+				dcl_texcoord3 o4.xyz
+				dcl_texcoord4 o5.xyz
+				dcl_color o6
+				dp4 o0.x, c0, v0
+				dp4 o0.y, c1, v0
+				dp4 o0.z, c2, v0
+				dp4 o0.w, c3, v0
+				mad o1.xy, v3, c11, c11.zwzw
+				mad o1.zw, v4.xyxy, c12.xyxy, c12
+				dp4 o5.x, c4, v0
+				dp4 o5.y, c5, v0
+				dp4 o5.z, c6, v0
+				dp3 r0.z, c4, v1
+				dp3 r0.x, c5, v1
+				dp3 r0.y, c6, v1
+				dp3 r0.w, r0, r0
+				rsq r0.w, r0.w
+				mul r0.xyz, r0.w, r0
+				mov o2.x, r0.z
+				mul r1.xyz, c8.zxyw, v2.y
+				mad r1.xyz, c7.zxyw, v2.x, r1
+				mad r1.xyz, c9.zxyw, v2.z, r1
+				dp3 r0.w, r1, r1
+				rsq r0.w, r0.w
+				mul r1.xyz, r0.w, r1
+				mul r2.xyz, r0, r1
+				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
+				mul r0.z, c10.w, v1.w
+				mul r2.xyz, r0.z, r2
+				mov o2.y, r2.x
+				mov o2.z, r1.y
+				mov o3.x, r0.x
+				mov o4.x, r0.y
+				mov o3.y, r2.y
+				mov o4.y, r2.z
+				mov o3.z, r1.z
+				mov o4.z, r1.x
+				mov o6, v5
+
+				"
+		}
+		SubProgram "d3d11 " {
+			// Stats: 34 math
+			Keywords{ "DIRECTIONAL" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				ConstBuffer "$Globals" 240
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
+				ConstBuffer "UnityPerDraw" 352
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 192[_Object2World]
+				Matrix 256[_World2Object]
+				Vector 336[unity_WorldTransformParams]
+				BindCB  "$Globals" 0
+				BindCB  "UnityPerDraw" 1
+				"vs_4_0
+				root12:aaacaaaa
+				eefiecedifigpakdediihgjeomkjikglficdbhnjabaaaaaaaeaiaaaaadaaaaaa
+				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
+				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
+				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
+				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
+				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
+				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
+				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
+				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
+				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
+				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
+				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
+				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
+				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
+				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
+				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaaapaaaaaafjaaaaaeegiocaaa
+				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
+				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
+				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
+				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
+				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
+				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
+				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
+				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
+				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
+				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
+				aaaaaaaaanaaaaaaogikcaaaaaaaaaaaanaaaaaadcaaaaalmccabaaaabaaaaaa
+				agbebaaaaeaaaaaaagiecaaaaaaaaaaaaoaaaaaakgiocaaaaaaaaaaaaoaaaaaa
+				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
+				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
+				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
+				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
+				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
+				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
+				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
+				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
+				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
+				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
+				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
+				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
+				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
+				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
+				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
+				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
+				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
+				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
+				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
+				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
+				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
+				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
+				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
+				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
+				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
+				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
+				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
+				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
+				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
+				doaaaaab"
+		}
+		SubProgram "gles " {
+			// Stats: 43 math, 2 textures
+			Keywords{ "DIRECTIONAL" }
+				"!!GLES
+				#version 100
+
+#ifdef VERTEX
+				attribute vec4 _glesTANGENT;
+			attribute vec4 _glesVertex;
+			attribute vec4 _glesColor;
+			attribute vec3 _glesNormal;
+			attribute vec4 _glesMultiTexCoord0;
+			attribute vec4 _glesMultiTexCoord1;
+			uniform highp mat4 glstate_matrix_mvp;
+			uniform highp mat4 _Object2World;
+			uniform highp mat4 _World2Object;
+			uniform highp vec4 unity_WorldTransformParams;
+			uniform highp vec4 _MainTex_ST;
+			uniform highp vec4 _Emissive_ST;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp float tangentSign_1;
+				lowp vec3 worldTangent_2;
+				lowp vec3 worldNormal_3;
+				highp vec4 tmpvar_4;
+				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				highp vec4 v_5;
+				v_5.x = _World2Object[0].x;
+				v_5.y = _World2Object[1].x;
+				v_5.z = _World2Object[2].x;
+				v_5.w = _World2Object[3].x;
+				highp vec4 v_6;
+				v_6.x = _World2Object[0].y;
+				v_6.y = _World2Object[1].y;
+				v_6.z = _World2Object[2].y;
+				v_6.w = _World2Object[3].y;
+				highp vec4 v_7;
+				v_7.x = _World2Object[0].z;
+				v_7.y = _World2Object[1].z;
+				v_7.z = _World2Object[2].z;
+				v_7.w = _World2Object[3].z;
+				highp vec3 tmpvar_8;
+				tmpvar_8 = normalize(((
+					(v_5.xyz * _glesNormal.x)
+					+
+					(v_6.xyz * _glesNormal.y)
+					) + (v_7.xyz * _glesNormal.z)));
+				worldNormal_3 = tmpvar_8;
+				highp mat3 tmpvar_9;
+				tmpvar_9[0] = _Object2World[0].xyz;
+				tmpvar_9[1] = _Object2World[1].xyz;
+				tmpvar_9[2] = _Object2World[2].xyz;
+				highp vec3 tmpvar_10;
+				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
+				worldTangent_2 = tmpvar_10;
+				highp float tmpvar_11;
+				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
+				tangentSign_1 = tmpvar_11;
+				lowp vec3 tmpvar_12;
+				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
+				lowp vec3 tmpvar_13;
+				tmpvar_13.x = worldTangent_2.x;
+				tmpvar_13.y = tmpvar_12.x;
+				tmpvar_13.z = worldNormal_3.x;
+				lowp vec3 tmpvar_14;
+				tmpvar_14.x = worldTangent_2.y;
+				tmpvar_14.y = tmpvar_12.y;
+				tmpvar_14.z = worldNormal_3.y;
+				lowp vec3 tmpvar_15;
+				tmpvar_15.x = worldTangent_2.z;
+				tmpvar_15.y = tmpvar_12.z;
+				tmpvar_15.z = worldNormal_3.z;
+				gl_Position = (glstate_matrix_mvp * _glesVertex);
+				xlv_TEXCOORD0 = tmpvar_4;
+				xlv_TEXCOORD1 = tmpvar_13;
+				xlv_TEXCOORD2 = tmpvar_14;
+				xlv_TEXCOORD3 = tmpvar_15;
+				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
+				xlv_COLOR0 = _glesColor;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform highp vec3 _WorldSpaceCameraPos;
+			uniform mediump vec4 _WorldSpaceLightPos0;
+			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
+			uniform mediump float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform highp float _Opacity;
+			uniform highp vec4 _BurnColor;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp vec3 worldN_1;
+				lowp vec3 worldViewDir_2;
+				lowp vec3 lightDir_3;
+				highp vec4 tmpvar_4;
+				mediump vec3 tmpvar_5;
+				tmpvar_5 = _WorldSpaceLightPos0.xyz;
+				lightDir_3 = tmpvar_5;
+				highp vec3 tmpvar_6;
+				tmpvar_6 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
+				worldViewDir_2 = tmpvar_6;
+				tmpvar_4 = xlv_COLOR0;
+				lowp vec3 tmpvar_7;
+				lowp float tmpvar_8;
+				lowp float tmpvar_9;
+				highp vec4 mask_10;
+				highp vec4 color_11;
+				lowp vec4 tmpvar_12;
+				tmpvar_12 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_11 = tmpvar_12;
+				lowp vec4 tmpvar_13;
+				tmpvar_13 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_10 = tmpvar_13;
+				highp vec2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
+				highp vec2 tmpvar_15;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
+				highp vec2 tmpvar_16;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
+				highp vec2 tmpvar_17;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
+				highp vec2 tmpvar_18;
+				highp float tmpvar_19;
+				tmpvar_19 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, vec2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, vec2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				highp vec3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(vec3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+				), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = (tmpvar_20 * _BurnColor.xyz);
+				highp float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = ((tmpvar_21 + 0.2) * tmpvar_18.y);
+				tmpvar_9 = _Opacity;
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				mediump vec3 lightDir_22;
+				lightDir_22 = lightDir_3;
+				mediump vec3 viewDir_23;
+				viewDir_23 = worldViewDir_2;
+				lowp vec4 c_24;
+				lowp float spec_25;
+				lowp float diff_26;
+				lowp vec3 halfDir_27;
+				lowp vec3 tmpvar_28;
+				tmpvar_28 = normalize(worldN_1);
+				mediump vec3 tmpvar_29;
+				tmpvar_29 = normalize((lightDir_22 + viewDir_23));
+				halfDir_27 = tmpvar_29;
+				mediump float tmpvar_30;
+				tmpvar_30 = max(0.0, dot(tmpvar_28, lightDir_22));
+				diff_26 = tmpvar_30;
+				lowp float tmpvar_31;
+				tmpvar_31 = max(0.0, dot(tmpvar_28, halfDir_27));
+				mediump float tmpvar_32;
+				tmpvar_32 = (pow(tmpvar_31, (_Shininess * 128.0)) * tmpvar_8);
+				spec_25 = tmpvar_32;
+				c_24.xyz = (_LightColor0.xyz * ((tmpvar_7 * diff_26) + (spec_25 * _SpecColor.xyz)));
+				c_24.w = (tmpvar_9 + ((_LightColor0.w * _SpecColor.w) * spec_25));
+				gl_FragData[0] = c_24;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "gles3 " {
+			Keywords{ "DIRECTIONAL" }
+				"!!GLES3
+#ifdef VERTEX
+				#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	mediump vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in highp vec4 in_POSITION0;
+			in highp vec4 in_TANGENT0;
+			in highp vec3 in_NORMAL0;
+			in highp vec4 in_TEXCOORD0;
+			in highp vec4 in_TEXCOORD1;
+			in lowp vec4 in_COLOR0;
+			out highp vec4 vs_TEXCOORD0;
+			out lowp vec3 vs_TEXCOORD1;
+			out lowp vec3 vs_TEXCOORD2;
+			out lowp vec3 vs_TEXCOORD3;
+			out highp vec3 vs_TEXCOORD4;
+			out lowp vec4 vs_COLOR0;
+			highp vec4 t0;
+			highp vec3 t1;
+			lowp vec3 t10_2;
+			highp float t3;
+			highp float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t10_2.xyz = t0.xyz * t1.xyz;
+				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t10_2.xyz = vec3(t3) * t10_2.xyz;
+				vs_TEXCOORD1.y = t10_2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t10_2.y;
+				vs_TEXCOORD3.y = t10_2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	mediump vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform lowp sampler2D _MainTex;
+			uniform lowp sampler2D _Emissive;
+			in highp vec4 vs_TEXCOORD0;
+			in lowp vec3 vs_TEXCOORD1;
+			in lowp vec3 vs_TEXCOORD2;
+			in lowp vec3 vs_TEXCOORD3;
+			in highp vec3 vs_TEXCOORD4;
+			in lowp vec4 vs_COLOR0;
+			layout(location = 0) out lowp vec4 SV_Target0;
+			highp vec2 t0;
+			highp vec4 t1;
+			highp vec4 t2;
+			lowp vec4 t10_3;
+			lowp vec3 t10_4;
+			mediump float t16_5;
+			mediump float t16_6;
+			highp vec3 t7;
+			mediump vec3 t16_12;
+			highp vec2 t14;
+			mediump float t16_14;
+			mediump float t16_19;
+			highp float t22;
+			lowp float t10_25;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t14.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t14.xy = clamp(t14.xy, 0.0, 1.0);
+				t1.xy = t14.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t14.yy * t1.xy + t0.xy;
+				t14.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t14.x = t1.x * t14.x + t0.y;
+				t14.x = clamp(t14.x, 0.0, 1.0);
+				t1.xzw = (-t14.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t14.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t16_14 = vs_COLOR0.w;
+				t16_14 = clamp(t16_14, 0.0, 1.0);
+				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
+				t10_4.x = vs_TEXCOORD1.z;
+				t10_4.y = vs_TEXCOORD2.z;
+				t10_4.z = vs_TEXCOORD3.z;
+				t10_25 = dot(t10_4.xyz, t10_4.xyz);
+				t10_25 = inversesqrt(t10_25);
+				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
+				t16_5 = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5 = max(t16_5, 0.0);
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t22 = dot(t1.xyz, t1.xyz);
+				t22 = inversesqrt(t22);
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * vec3(t16_5) + t10_4.xyz;
+				SV_Target0.xyz = t10_4.xyz * _LightColor0.xyz;
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t16_5 = t10_4.x * t16_12.x + _Opacity;
+				SV_Target0.w = t16_5;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "metal " {
+			// Stats: 19 math
+			Keywords{ "DIRECTIONAL" }
+				Bind "tangent" ATTR0
+				Bind "vertex" ATTR1
+				Bind "color" ATTR2
+				Bind "normal" ATTR3
+				Bind "texcoord" ATTR4
+				Bind "texcoord1" ATTR5
+				ConstBuffer "$Globals" 240
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 64[_Object2World]
+				Matrix 128[_World2Object]
+				Vector 192[unity_WorldTransformParams]
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
+				"metal_vs
+#include <metal_stdlib>
+				using namespace metal;
+			struct xlatMtlShaderInput {
+				float4 _glesTANGENT[[attribute(0)]];
+				float4 _glesVertex[[attribute(1)]];
+				float4 _glesColor[[attribute(2)]];
+				float3 _glesNormal[[attribute(3)]];
+				float4 _glesMultiTexCoord0[[attribute(4)]];
+				float4 _glesMultiTexCoord1[[attribute(5)]];
+			};
+			struct xlatMtlShaderOutput {
+				float4 gl_Position[[position]];
+				float4 xlv_TEXCOORD0;
+				half3 xlv_TEXCOORD1;
+				half3 xlv_TEXCOORD2;
+				half3 xlv_TEXCOORD3;
+				float3 xlv_TEXCOORD4;
+				half4 xlv_COLOR0;
+			};
+			struct xlatMtlShaderUniform {
+				float4x4 glstate_matrix_mvp;
+				float4x4 _Object2World;
+				float4x4 _World2Object;
+				float4 unity_WorldTransformParams;
+				float4 _MainTex_ST;
+				float4 _Emissive_ST;
+			};
+			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
+			{
+				xlatMtlShaderOutput _mtl_o;
+				half4 tmpvar_1;
+				tmpvar_1 = half4(_mtl_i._glesColor);
+				half tangentSign_2;
+				half3 worldTangent_3;
+				half3 worldNormal_4;
+				float4 tmpvar_5;
+				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
+				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
+				float4 v_6;
+				v_6.x = _mtl_u._World2Object[0].x;
+				v_6.y = _mtl_u._World2Object[1].x;
+				v_6.z = _mtl_u._World2Object[2].x;
+				v_6.w = _mtl_u._World2Object[3].x;
+				float4 v_7;
+				v_7.x = _mtl_u._World2Object[0].y;
+				v_7.y = _mtl_u._World2Object[1].y;
+				v_7.z = _mtl_u._World2Object[2].y;
+				v_7.w = _mtl_u._World2Object[3].y;
+				float4 v_8;
+				v_8.x = _mtl_u._World2Object[0].z;
+				v_8.y = _mtl_u._World2Object[1].z;
+				v_8.z = _mtl_u._World2Object[2].z;
+				v_8.w = _mtl_u._World2Object[3].z;
+				float3 tmpvar_9;
+				tmpvar_9 = normalize(((
+					(v_6.xyz * _mtl_i._glesNormal.x)
+					+
+					(v_7.xyz * _mtl_i._glesNormal.y)
+					) + (v_8.xyz * _mtl_i._glesNormal.z)));
+				worldNormal_4 = half3(tmpvar_9);
+				float3x3 tmpvar_10;
+				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
+				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
+				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
+				float3 tmpvar_11;
+				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
+				worldTangent_3 = half3(tmpvar_11);
+				float tmpvar_12;
+				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
+				tangentSign_2 = half(tmpvar_12);
+				half3 tmpvar_13;
+				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
+				half3 tmpvar_14;
+				tmpvar_14.x = worldTangent_3.x;
+				tmpvar_14.y = tmpvar_13.x;
+				tmpvar_14.z = worldNormal_4.x;
+				half3 tmpvar_15;
+				tmpvar_15.x = worldTangent_3.y;
+				tmpvar_15.y = tmpvar_13.y;
+				tmpvar_15.z = worldNormal_4.y;
+				half3 tmpvar_16;
+				tmpvar_16.x = worldTangent_3.z;
+				tmpvar_16.y = tmpvar_13.z;
+				tmpvar_16.z = worldNormal_4.z;
+				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
+				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
+				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
+				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
+				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
+				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
+				_mtl_o.xlv_COLOR0 = tmpvar_1;
+				return _mtl_o;
+			}
+
+			"
+		}
+		SubProgram "glcore " {
+			Keywords{ "DIRECTIONAL" }
+				"!!GL3x
+#ifdef VERTEX
+				#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in  vec4 in_POSITION0;
+			in  vec4 in_TANGENT0;
+			in  vec3 in_NORMAL0;
+			in  vec4 in_TEXCOORD0;
+			in  vec4 in_TEXCOORD1;
+			in  vec4 in_COLOR0;
+			out vec4 vs_TEXCOORD0;
+			out vec3 vs_TEXCOORD1;
+			out vec3 vs_TEXCOORD2;
+			out vec3 vs_TEXCOORD3;
+			out vec3 vs_TEXCOORD4;
+			out vec4 vs_COLOR0;
+			vec4 t0;
+			vec3 t1;
+			vec3 t2;
+			float t3;
+			float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t2.xyz = t0.xyz * t1.xyz;
+				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t2.xyz = vec3(t3) * t2.xyz;
+				vs_TEXCOORD1.y = t2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t2.y;
+				vs_TEXCOORD3.y = t2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform  sampler2D _MainTex;
+			uniform  sampler2D _Emissive;
+			in  vec4 vs_TEXCOORD0;
+			in  vec3 vs_TEXCOORD1;
+			in  vec3 vs_TEXCOORD2;
+			in  vec3 vs_TEXCOORD3;
+			in  vec3 vs_TEXCOORD4;
+			in  vec4 vs_COLOR0;
+			out vec4 SV_Target0;
+			vec2 t0;
+			vec4 t1;
+			vec4 t2;
+			lowp vec4 t10_3;
+			vec3 t4;
+			float t5;
+			vec3 t6;
+			vec2 t8;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t8.xy = clamp(t8.xy, 0.0, 1.0);
+				t1.xy = t8.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t8.yy * t1.xy + t0.xy;
+				t8.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t8.x = t1.x * t8.x + t0.y;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t8.x = vs_COLOR0.w;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
+				t2.x = vs_TEXCOORD1.z;
+				t2.y = vs_TEXCOORD2.z;
+				t2.z = vs_TEXCOORD3.z;
+				t1.x = dot(t2.xyz, t2.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.xzw = t1.xxx * t2.xyz;
+				t2.x = dot(t1.xzw, _WorldSpaceLightPos0.xyz);
+				t2.x = max(t2.x, 0.0);
+				t6.x = t1.y * t1.y;
+				t5 = t1.y * t6.x + 0.200000003;
+				t0.x = t0.x * t5;
+				t6.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t5 = dot(t6.xyz, t6.xyz);
+				t5 = inversesqrt(t5);
+				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
+				t5 = dot(t6.xyz, t6.xyz);
+				t5 = inversesqrt(t5);
+				t6.xyz = vec3(t5) * t6.xyz;
+				t1.x = dot(t1.xzw, t6.xyz);
+				t1.x = max(t1.x, 0.0);
+				t1.x = log2(t1.x);
+				t5 = _Shininess * 128.0;
+				t1.x = t1.x * t5;
+				t1.x = exp2(t1.x);
+				t0.x = t0.x * t1.x;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t4.xyz = t4.xyz * t2.xxx + t1.xyz;
+				SV_Target0.xyz = t4.xyz * _LightColor0.xyz;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				SV_Target0.w = t4.x * t0.x + _Opacity;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "opengl " {
+			// Stats: 56 math, 4 textures
+			Keywords{ "SPOT" }
+				"!!GLSL#version 120
+
+#ifdef VERTEX
+
+				uniform mat4 _Object2World;
+			uniform mat4 _World2Object;
+			uniform vec4 unity_WorldTransformParams;
+			uniform vec4 _MainTex_ST;
+			uniform vec4 _Emissive_ST;
+			attribute vec4 TANGENT;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec4 tmpvar_1;
+				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				vec4 v_2;
+				v_2.x = _World2Object[0].x;
+				v_2.y = _World2Object[1].x;
+				v_2.z = _World2Object[2].x;
+				v_2.w = _World2Object[3].x;
+				vec4 v_3;
+				v_3.x = _World2Object[0].y;
+				v_3.y = _World2Object[1].y;
+				v_3.z = _World2Object[2].y;
+				v_3.w = _World2Object[3].y;
+				vec4 v_4;
+				v_4.x = _World2Object[0].z;
+				v_4.y = _World2Object[1].z;
+				v_4.z = _World2Object[2].z;
+				v_4.w = _World2Object[3].z;
+				vec3 tmpvar_5;
+				tmpvar_5 = normalize(((
+					(v_2.xyz * gl_Normal.x)
+					+
+					(v_3.xyz * gl_Normal.y)
+					) + (v_4.xyz * gl_Normal.z)));
+				mat3 tmpvar_6;
+				tmpvar_6[0] = _Object2World[0].xyz;
+				tmpvar_6[1] = _Object2World[1].xyz;
+				tmpvar_6[2] = _Object2World[2].xyz;
+				vec3 tmpvar_7;
+				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
+				vec3 tmpvar_8;
+				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
+				vec3 tmpvar_9;
+				tmpvar_9.x = tmpvar_7.x;
+				tmpvar_9.y = tmpvar_8.x;
+				tmpvar_9.z = tmpvar_5.x;
+				vec3 tmpvar_10;
+				tmpvar_10.x = tmpvar_7.y;
+				tmpvar_10.y = tmpvar_8.y;
+				tmpvar_10.z = tmpvar_5.y;
+				vec3 tmpvar_11;
+				tmpvar_11.x = tmpvar_7.z;
+				tmpvar_11.y = tmpvar_8.z;
+				tmpvar_11.z = tmpvar_5.z;
+				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
+				xlv_TEXCOORD0 = tmpvar_1;
+				xlv_TEXCOORD1 = tmpvar_9;
+				xlv_TEXCOORD2 = tmpvar_10;
+				xlv_TEXCOORD3 = tmpvar_11;
+				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
+				xlv_COLOR0 = gl_Color;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform vec3 _WorldSpaceCameraPos;
+			uniform vec4 _WorldSpaceLightPos0;
+			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
+			uniform sampler2D _LightTexture0;
+			uniform mat4 _LightMatrix0;
+			uniform sampler2D _LightTextureB0;
+			uniform float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform float _Opacity;
+			uniform vec4 _BurnColor;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec3 worldN_1;
+				vec3 tmpvar_2;
+				tmpvar_2 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
+				vec4 tmpvar_3;
+				tmpvar_3 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_4;
+				tmpvar_4 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				vec2 tmpvar_5;
+				tmpvar_5.x = tmpvar_3.x;
+				tmpvar_5.y = tmpvar_4.x;
+				vec2 tmpvar_6;
+				tmpvar_6.x = tmpvar_3.y;
+				tmpvar_6.y = tmpvar_4.y;
+				vec2 tmpvar_7;
+				tmpvar_7.x = tmpvar_3.z;
+				tmpvar_7.y = tmpvar_4.z;
+				vec2 tmpvar_8;
+				tmpvar_8.x = tmpvar_3.w;
+				tmpvar_8.y = tmpvar_4.w;
+				vec2 tmpvar_9;
+				float tmpvar_10;
+				tmpvar_10 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_9 = mix(mix(tmpvar_5, tmpvar_6, vec2(clamp(tmpvar_10, 0.0, 1.0))), mix(tmpvar_7, tmpvar_8, vec2(clamp(
+					(tmpvar_10 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_10 - 1.0), 0.0, 1.0)));
+				vec4 tmpvar_11;
+				tmpvar_11.w = 1.0;
+				tmpvar_11.xyz = xlv_TEXCOORD4;
+				vec4 tmpvar_12;
+				tmpvar_12 = (_LightMatrix0 * tmpvar_11);
+				float tmpvar_13;
+				tmpvar_13 = ((float(
+					(tmpvar_12.z > 0.0)
+					) * texture2D (_LightTexture0, (
+					(tmpvar_12.xy / tmpvar_12.w)
+						+ 0.5)).w) * texture2D (_LightTextureB0, vec2(dot(tmpvar_12.xyz, tmpvar_12.xyz))).w);
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				vec4 c_14;
+				vec3 tmpvar_15;
+				tmpvar_15 = normalize(worldN_1);
+				float tmpvar_16;
+				tmpvar_16 = (pow(max(0.0,
+					dot(tmpvar_15, normalize((tmpvar_2 + normalize(
+					(_WorldSpaceCameraPos - xlv_TEXCOORD4)
+					))))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_9.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_9.y));
+				c_14.xyz = ((_LightColor0.xyz * (
+					((mix(tmpvar_9.xxx, mix(
+						mix(vec3(clamp((tmpvar_9.x + (
+						(1.0 - tmpvar_9.y)
+							*
+							(tmpvar_9.x * tmpvar_9.x)
+							)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_9.yyy)
+						, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz) * max(0.0, dot(tmpvar_15, tmpvar_2)))
+					+
+					(tmpvar_16 * _SpecColor.xyz)
+					)) * tmpvar_13);
+				c_14.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_16 * tmpvar_13)));
+				gl_FragData[0] = c_14;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "d3d9 " {
+			// Stats: 35 math
+			Keywords{ "SPOT" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				Matrix 4[_Object2World] 3
+				Matrix 7[_World2Object] 3
+				Matrix 0[glstate_matrix_mvp]
+				Vector 12[_Emissive_ST]
+				Vector 11[_MainTex_ST]
+				Vector 10[unity_WorldTransformParams]
+				"vs_3_0
+				dcl_position v0
+				dcl_tangent v1
+				dcl_normal v2
+				dcl_texcoord v3
+				dcl_texcoord1 v4
+				dcl_color v5
+				dcl_position o0
+				dcl_texcoord o1
+				dcl_texcoord1 o2.xyz
+				dcl_texcoord2 o3.xyz
+				dcl_texcoord3 o4.xyz
+				dcl_texcoord4 o5.xyz
+				dcl_color o6
+				dp4 o0.x, c0, v0
+				dp4 o0.y, c1, v0
+				dp4 o0.z, c2, v0
+				dp4 o0.w, c3, v0
+				mad o1.xy, v3, c11, c11.zwzw
+				mad o1.zw, v4.xyxy, c12.xyxy, c12
+				dp4 o5.x, c4, v0
+				dp4 o5.y, c5, v0
+				dp4 o5.z, c6, v0
+				dp3 r0.z, c4, v1
+				dp3 r0.x, c5, v1
+				dp3 r0.y, c6, v1
+				dp3 r0.w, r0, r0
+				rsq r0.w, r0.w
+				mul r0.xyz, r0.w, r0
+				mov o2.x, r0.z
+				mul r1.xyz, c8.zxyw, v2.y
+				mad r1.xyz, c7.zxyw, v2.x, r1
+				mad r1.xyz, c9.zxyw, v2.z, r1
+				dp3 r0.w, r1, r1
+				rsq r0.w, r0.w
+				mul r1.xyz, r0.w, r1
+				mul r2.xyz, r0, r1
+				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
+				mul r0.z, c10.w, v1.w
+				mul r2.xyz, r0.z, r2
+				mov o2.y, r2.x
+				mov o2.z, r1.y
+				mov o3.x, r0.x
+				mov o4.x, r0.y
+				mov o3.y, r2.y
+				mov o4.y, r2.z
+				mov o3.z, r1.z
+				mov o4.z, r1.x
+				mov o6, v5
+
+				"
+		}
+		SubProgram "d3d11 " {
+			// Stats: 34 math
+			Keywords{ "SPOT" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				ConstBuffer "$Globals" 304
+				Vector 272[_MainTex_ST]
+				Vector 288[_Emissive_ST]
+				ConstBuffer "UnityPerDraw" 352
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 192[_Object2World]
+				Matrix 256[_World2Object]
+				Vector 336[unity_WorldTransformParams]
+				BindCB  "$Globals" 0
+				BindCB  "UnityPerDraw" 1
+				"vs_4_0
+				root12:aaacaaaa
+				eefiecedgdmnpmfdjmlgkfdjcbocadegflimgmfgabaaaaaaaeaiaaaaadaaaaaa
+				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
+				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
+				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
+				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
+				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
+				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
+				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
+				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
+				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
+				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
+				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
+				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
+				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
+				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
+				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabdaaaaaafjaaaaaeegiocaaa
+				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
+				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
+				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
+				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
+				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
+				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
+				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
+				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
+				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
+				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
+				aaaaaaaabbaaaaaaogikcaaaaaaaaaaabbaaaaaadcaaaaalmccabaaaabaaaaaa
+				agbebaaaaeaaaaaaagiecaaaaaaaaaaabcaaaaaakgiocaaaaaaaaaaabcaaaaaa
+				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
+				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
+				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
+				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
+				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
+				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
+				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
+				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
+				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
+				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
+				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
+				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
+				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
+				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
+				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
+				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
+				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
+				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
+				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
+				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
+				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
+				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
+				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
+				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
+				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
+				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
+				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
+				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
+				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
+				doaaaaab"
+		}
+		SubProgram "gles " {
+			// Stats: 56 math, 4 textures
+			Keywords{ "SPOT" }
+				"!!GLES
+				#version 100
+
+#ifdef VERTEX
+				attribute vec4 _glesTANGENT;
+			attribute vec4 _glesVertex;
+			attribute vec4 _glesColor;
+			attribute vec3 _glesNormal;
+			attribute vec4 _glesMultiTexCoord0;
+			attribute vec4 _glesMultiTexCoord1;
+			uniform highp mat4 glstate_matrix_mvp;
+			uniform highp mat4 _Object2World;
+			uniform highp mat4 _World2Object;
+			uniform highp vec4 unity_WorldTransformParams;
+			uniform highp vec4 _MainTex_ST;
+			uniform highp vec4 _Emissive_ST;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp float tangentSign_1;
+				lowp vec3 worldTangent_2;
+				lowp vec3 worldNormal_3;
+				highp vec4 tmpvar_4;
+				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				highp vec4 v_5;
+				v_5.x = _World2Object[0].x;
+				v_5.y = _World2Object[1].x;
+				v_5.z = _World2Object[2].x;
+				v_5.w = _World2Object[3].x;
+				highp vec4 v_6;
+				v_6.x = _World2Object[0].y;
+				v_6.y = _World2Object[1].y;
+				v_6.z = _World2Object[2].y;
+				v_6.w = _World2Object[3].y;
+				highp vec4 v_7;
+				v_7.x = _World2Object[0].z;
+				v_7.y = _World2Object[1].z;
+				v_7.z = _World2Object[2].z;
+				v_7.w = _World2Object[3].z;
+				highp vec3 tmpvar_8;
+				tmpvar_8 = normalize(((
+					(v_5.xyz * _glesNormal.x)
+					+
+					(v_6.xyz * _glesNormal.y)
+					) + (v_7.xyz * _glesNormal.z)));
+				worldNormal_3 = tmpvar_8;
+				highp mat3 tmpvar_9;
+				tmpvar_9[0] = _Object2World[0].xyz;
+				tmpvar_9[1] = _Object2World[1].xyz;
+				tmpvar_9[2] = _Object2World[2].xyz;
+				highp vec3 tmpvar_10;
+				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
+				worldTangent_2 = tmpvar_10;
+				highp float tmpvar_11;
+				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
+				tangentSign_1 = tmpvar_11;
+				lowp vec3 tmpvar_12;
+				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
+				lowp vec3 tmpvar_13;
+				tmpvar_13.x = worldTangent_2.x;
+				tmpvar_13.y = tmpvar_12.x;
+				tmpvar_13.z = worldNormal_3.x;
+				lowp vec3 tmpvar_14;
+				tmpvar_14.x = worldTangent_2.y;
+				tmpvar_14.y = tmpvar_12.y;
+				tmpvar_14.z = worldNormal_3.y;
+				lowp vec3 tmpvar_15;
+				tmpvar_15.x = worldTangent_2.z;
+				tmpvar_15.y = tmpvar_12.z;
+				tmpvar_15.z = worldNormal_3.z;
+				gl_Position = (glstate_matrix_mvp * _glesVertex);
+				xlv_TEXCOORD0 = tmpvar_4;
+				xlv_TEXCOORD1 = tmpvar_13;
+				xlv_TEXCOORD2 = tmpvar_14;
+				xlv_TEXCOORD3 = tmpvar_15;
+				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
+				xlv_COLOR0 = _glesColor;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform highp vec3 _WorldSpaceCameraPos;
+			uniform highp vec4 _WorldSpaceLightPos0;
+			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
+			uniform sampler2D _LightTexture0;
+			uniform mediump mat4 _LightMatrix0;
+			uniform sampler2D _LightTextureB0;
+			uniform mediump float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform highp float _Opacity;
+			uniform highp vec4 _BurnColor;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp vec3 worldN_1;
+				lowp float atten_2;
+				mediump vec4 lightCoord_3;
+				lowp vec3 worldViewDir_4;
+				lowp vec3 lightDir_5;
+				highp vec4 tmpvar_6;
+				highp vec3 tmpvar_7;
+				tmpvar_7 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
+				lightDir_5 = tmpvar_7;
+				highp vec3 tmpvar_8;
+				tmpvar_8 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
+				worldViewDir_4 = tmpvar_8;
+				tmpvar_6 = xlv_COLOR0;
+				lowp vec3 tmpvar_9;
+				lowp float tmpvar_10;
+				lowp float tmpvar_11;
+				highp vec4 mask_12;
+				highp vec4 color_13;
+				lowp vec4 tmpvar_14;
+				tmpvar_14 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_13 = tmpvar_14;
+				lowp vec4 tmpvar_15;
+				tmpvar_15 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_12 = tmpvar_15;
+				highp vec2 tmpvar_16;
+				tmpvar_16.x = color_13.x;
+				tmpvar_16.y = mask_12.x;
+				highp vec2 tmpvar_17;
+				tmpvar_17.x = color_13.y;
+				tmpvar_17.y = mask_12.y;
+				highp vec2 tmpvar_18;
+				tmpvar_18.x = color_13.z;
+				tmpvar_18.y = mask_12.z;
+				highp vec2 tmpvar_19;
+				tmpvar_19.x = color_13.w;
+				tmpvar_19.y = mask_12.w;
+				highp vec2 tmpvar_20;
+				highp float tmpvar_21;
+				tmpvar_21 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_20 = mix(mix(tmpvar_16, tmpvar_17, vec2(clamp(tmpvar_21, 0.0, 1.0))), mix(tmpvar_18, tmpvar_19, vec2(clamp(
+					(tmpvar_21 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_21 - 1.0), 0.0, 1.0)));
+				highp vec3 tmpvar_22;
+				tmpvar_22 = mix(tmpvar_20.xxx, mix(mix(vec3(
+					clamp((tmpvar_20.x + ((1.0 - tmpvar_20.y) * (tmpvar_20.x * tmpvar_20.x))), 0.0, 1.0)
+				), tmpvar_6.xyz, tmpvar_20.yyy), tmpvar_6.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_6.w, 0.0, 1.0)));
+				tmpvar_9 = (tmpvar_22 * _BurnColor.xyz);
+				highp float tmpvar_23;
+				tmpvar_23 = pow(((1.0 - tmpvar_20.y) + 0.4), 3.0);
+				tmpvar_10 = ((tmpvar_23 + 0.2) * tmpvar_20.y);
+				tmpvar_11 = _Opacity;
+				highp vec4 tmpvar_24;
+				tmpvar_24.w = 1.0;
+				tmpvar_24.xyz = xlv_TEXCOORD4;
+				highp vec4 tmpvar_25;
+				tmpvar_25 = (_LightMatrix0 * tmpvar_24);
+				lightCoord_3 = tmpvar_25;
+				lowp vec4 tmpvar_26;
+				mediump vec2 P_27;
+				P_27 = ((lightCoord_3.xy / lightCoord_3.w) + 0.5);
+				tmpvar_26 = texture2D (_LightTexture0, P_27);
+				highp vec3 LightCoord_28;
+				LightCoord_28 = lightCoord_3.xyz;
+				highp float tmpvar_29;
+				tmpvar_29 = dot(LightCoord_28, LightCoord_28);
+				lowp vec4 tmpvar_30;
+				tmpvar_30 = texture2D (_LightTextureB0, vec2(tmpvar_29));
+				mediump float tmpvar_31;
+				tmpvar_31 = ((float(
+					(lightCoord_3.z > 0.0)
+					) * tmpvar_26.w) * tmpvar_30.w);
+				atten_2 = tmpvar_31;
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				mediump vec3 lightDir_32;
+				lightDir_32 = lightDir_5;
+				mediump vec3 viewDir_33;
+				viewDir_33 = worldViewDir_4;
+				mediump float atn_34;
+				atn_34 = atten_2;
+				lowp vec4 c_35;
+				lowp float spec_36;
+				lowp float diff_37;
+				lowp vec3 halfDir_38;
+				lowp vec3 tmpvar_39;
+				tmpvar_39 = normalize(worldN_1);
+				mediump vec3 tmpvar_40;
+				tmpvar_40 = normalize((lightDir_32 + viewDir_33));
+				halfDir_38 = tmpvar_40;
+				mediump float tmpvar_41;
+				tmpvar_41 = max(0.0, dot(tmpvar_39, lightDir_32));
+				diff_37 = tmpvar_41;
+				lowp float tmpvar_42;
+				tmpvar_42 = max(0.0, dot(tmpvar_39, halfDir_38));
+				mediump float tmpvar_43;
+				tmpvar_43 = (pow(tmpvar_42, (_Shininess * 128.0)) * tmpvar_10);
+				spec_36 = tmpvar_43;
+				c_35.xyz = ((_LightColor0.xyz * (
+					(tmpvar_9 * diff_37)
+					+
+					(spec_36 * _SpecColor.xyz)
+					)) * atn_34);
+				c_35.w = (tmpvar_11 + ((_LightColor0.w * _SpecColor.w) * (spec_36 * atn_34)));
+				gl_FragData[0] = c_35;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "gles3 " {
+			Keywords{ "SPOT" }
+				"!!GLES3
+#ifdef VERTEX
+				#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in highp vec4 in_POSITION0;
+			in highp vec4 in_TANGENT0;
+			in highp vec3 in_NORMAL0;
+			in highp vec4 in_TEXCOORD0;
+			in highp vec4 in_TEXCOORD1;
+			in lowp vec4 in_COLOR0;
+			out highp vec4 vs_TEXCOORD0;
+			out lowp vec3 vs_TEXCOORD1;
+			out lowp vec3 vs_TEXCOORD2;
+			out lowp vec3 vs_TEXCOORD3;
+			out highp vec3 vs_TEXCOORD4;
+			out lowp vec4 vs_COLOR0;
+			highp vec4 t0;
+			highp vec3 t1;
+			lowp vec3 t10_2;
+			highp float t3;
+			highp float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t10_2.xyz = t0.xyz * t1.xyz;
+				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t10_2.xyz = vec3(t3) * t10_2.xyz;
+				vs_TEXCOORD1.y = t10_2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t10_2.y;
+				vs_TEXCOORD3.y = t10_2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform lowp sampler2D _MainTex;
+			uniform lowp sampler2D _Emissive;
+			uniform lowp sampler2D _LightTexture0;
+			uniform lowp sampler2D _LightTextureB0;
+			in highp vec4 vs_TEXCOORD0;
+			in lowp vec3 vs_TEXCOORD1;
+			in lowp vec3 vs_TEXCOORD2;
+			in lowp vec3 vs_TEXCOORD3;
+			in highp vec3 vs_TEXCOORD4;
+			in lowp vec4 vs_COLOR0;
+			layout(location = 0) out lowp vec4 SV_Target0;
+			highp vec2 t0;
+			mediump vec4 t16_0;
+			highp vec4 t1;
+			lowp float t10_1;
+			highp vec4 t2;
+			lowp vec4 t10_3;
+			mediump vec3 t16_4;
+			lowp vec3 t10_5;
+			highp vec3 t6;
+			bool tb7;
+			mediump float t16_10;
+			highp vec2 t12;
+			mediump float t16_12;
+			mediump float t16_13;
+			lowp float t10_13;
+			mediump float t16_16;
+			highp float t19;
+			mediump float t16_22;
+			lowp float t10_23;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t12.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t12.xy = clamp(t12.xy, 0.0, 1.0);
+				t1.xy = t12.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t12.yy * t1.xy + t0.xy;
+				t12.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t12.x = t1.x * t12.x + t0.y;
+				t12.x = clamp(t12.x, 0.0, 1.0);
+				t1.xzw = (-t12.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t12.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t16_12 = vs_COLOR0.w;
+				t16_12 = clamp(t16_12, 0.0, 1.0);
+				t6.xyz = vec3(t16_12) * t1.xzw + t0.yyy;
+				t6.xyz = t6.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t19 = dot(t1.xyz, t1.xyz);
+				t19 = inversesqrt(t19);
+				t1.xyz = vec3(t19) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t19 = dot(t2.xyz, t2.xyz);
+				t19 = inversesqrt(t19);
+				t16_4.xyz = t2.xyz * vec3(t19) + t1.xyz;
+				t16_22 = dot(t16_4.xyz, t16_4.xyz);
+				t16_22 = inversesqrt(t16_22);
+				t16_4.xyz = vec3(t16_22) * t16_4.xyz;
+				t10_5.x = vs_TEXCOORD1.z;
+				t10_5.y = vs_TEXCOORD2.z;
+				t10_5.z = vs_TEXCOORD3.z;
+				t10_23 = dot(t10_5.xyz, t10_5.xyz);
+				t10_23 = inversesqrt(t10_23);
+				t10_5.xyz = vec3(t10_23) * t10_5.xyz;
+				t10_23 = dot(t10_5.xyz, t16_4.xyz);
+				t16_4.x = dot(t10_5.xyz, t1.xyz);
+				t16_4.x = max(t16_4.x, 0.0);
+				t10_5.x = max(t10_23, 0.0);
+				t16_10 = log2(t10_5.x);
+				t16_16 = _Shininess * 128.0;
+				t16_10 = t16_10 * t16_16;
+				t16_10 = exp2(t16_10);
+				t16_10 = t0.x * t16_10;
+				t10_5.xyz = vec3(t16_10) * _SpecColor.xyz;
+				t10_5.xyz = t6.xyz * t16_4.xxx + t10_5.xyz;
+				t10_5.xyz = t10_5.xyz * _LightColor0.xyz;
+				t16_0 = vs_TEXCOORD4.yyyy * _LightMatrix0[1];
+				t16_0 = _LightMatrix0[0] * vs_TEXCOORD4.xxxx + t16_0;
+				t16_0 = _LightMatrix0[2] * vs_TEXCOORD4.zzzz + t16_0;
+				t16_0 = t16_0 + _LightMatrix0[3];
+				t16_4.xz = t16_0.xy / t16_0.ww;
+				t16_4.xz = t16_4.xz + vec2(0.5, 0.5);
+				t10_1 = texture(_LightTexture0, t16_4.xz).w;
+				tb7 = 0.0<t16_0.z;
+				t16_13 = dot(t16_0.xyz, t16_0.xyz);
+				t10_13 = texture(_LightTextureB0, vec2(t16_13)).w;
+				t10_23 = (tb7) ? 1.0 : 0.0;
+				t10_23 = t10_1 * t10_23;
+				t10_23 = t10_13 * t10_23;
+				t16_0.xyz = vec3(t10_23) * t10_5.xyz;
+				t10_5.x = _LightColor0.w * _SpecColor.w;
+				t10_5.x = t16_10 * t10_5.x;
+				t16_0.w = t10_5.x * t10_23 + _Opacity;
+				SV_Target0 = t16_0;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "metal " {
+			// Stats: 19 math
+			Keywords{ "SPOT" }
+				Bind "tangent" ATTR0
+				Bind "vertex" ATTR1
+				Bind "color" ATTR2
+				Bind "normal" ATTR3
+				Bind "texcoord" ATTR4
+				Bind "texcoord1" ATTR5
+				ConstBuffer "$Globals" 240
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 64[_Object2World]
+				Matrix 128[_World2Object]
+				Vector 192[unity_WorldTransformParams]
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
+				"metal_vs
+#include <metal_stdlib>
+				using namespace metal;
+			struct xlatMtlShaderInput {
+				float4 _glesTANGENT[[attribute(0)]];
+				float4 _glesVertex[[attribute(1)]];
+				float4 _glesColor[[attribute(2)]];
+				float3 _glesNormal[[attribute(3)]];
+				float4 _glesMultiTexCoord0[[attribute(4)]];
+				float4 _glesMultiTexCoord1[[attribute(5)]];
+			};
+			struct xlatMtlShaderOutput {
+				float4 gl_Position[[position]];
+				float4 xlv_TEXCOORD0;
+				half3 xlv_TEXCOORD1;
+				half3 xlv_TEXCOORD2;
+				half3 xlv_TEXCOORD3;
+				float3 xlv_TEXCOORD4;
+				half4 xlv_COLOR0;
+			};
+			struct xlatMtlShaderUniform {
+				float4x4 glstate_matrix_mvp;
+				float4x4 _Object2World;
+				float4x4 _World2Object;
+				float4 unity_WorldTransformParams;
+				float4 _MainTex_ST;
+				float4 _Emissive_ST;
+			};
+			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
+			{
+				xlatMtlShaderOutput _mtl_o;
+				half4 tmpvar_1;
+				tmpvar_1 = half4(_mtl_i._glesColor);
+				half tangentSign_2;
+				half3 worldTangent_3;
+				half3 worldNormal_4;
+				float4 tmpvar_5;
+				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
+				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
+				float4 v_6;
+				v_6.x = _mtl_u._World2Object[0].x;
+				v_6.y = _mtl_u._World2Object[1].x;
+				v_6.z = _mtl_u._World2Object[2].x;
+				v_6.w = _mtl_u._World2Object[3].x;
+				float4 v_7;
+				v_7.x = _mtl_u._World2Object[0].y;
+				v_7.y = _mtl_u._World2Object[1].y;
+				v_7.z = _mtl_u._World2Object[2].y;
+				v_7.w = _mtl_u._World2Object[3].y;
+				float4 v_8;
+				v_8.x = _mtl_u._World2Object[0].z;
+				v_8.y = _mtl_u._World2Object[1].z;
+				v_8.z = _mtl_u._World2Object[2].z;
+				v_8.w = _mtl_u._World2Object[3].z;
+				float3 tmpvar_9;
+				tmpvar_9 = normalize(((
+					(v_6.xyz * _mtl_i._glesNormal.x)
+					+
+					(v_7.xyz * _mtl_i._glesNormal.y)
+					) + (v_8.xyz * _mtl_i._glesNormal.z)));
+				worldNormal_4 = half3(tmpvar_9);
+				float3x3 tmpvar_10;
+				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
+				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
+				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
+				float3 tmpvar_11;
+				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
+				worldTangent_3 = half3(tmpvar_11);
+				float tmpvar_12;
+				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
+				tangentSign_2 = half(tmpvar_12);
+				half3 tmpvar_13;
+				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
+				half3 tmpvar_14;
+				tmpvar_14.x = worldTangent_3.x;
+				tmpvar_14.y = tmpvar_13.x;
+				tmpvar_14.z = worldNormal_4.x;
+				half3 tmpvar_15;
+				tmpvar_15.x = worldTangent_3.y;
+				tmpvar_15.y = tmpvar_13.y;
+				tmpvar_15.z = worldNormal_4.y;
+				half3 tmpvar_16;
+				tmpvar_16.x = worldTangent_3.z;
+				tmpvar_16.y = tmpvar_13.z;
+				tmpvar_16.z = worldNormal_4.z;
+				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
+				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
+				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
+				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
+				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
+				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
+				_mtl_o.xlv_COLOR0 = tmpvar_1;
+				return _mtl_o;
+			}
+
+			"
+		}
+		SubProgram "glcore " {
+			Keywords{ "SPOT" }
+				"!!GL3x
+#ifdef VERTEX
+				#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in  vec4 in_POSITION0;
+			in  vec4 in_TANGENT0;
+			in  vec3 in_NORMAL0;
+			in  vec4 in_TEXCOORD0;
+			in  vec4 in_TEXCOORD1;
+			in  vec4 in_COLOR0;
+			out vec4 vs_TEXCOORD0;
+			out vec3 vs_TEXCOORD1;
+			out vec3 vs_TEXCOORD2;
+			out vec3 vs_TEXCOORD3;
+			out vec3 vs_TEXCOORD4;
+			out vec4 vs_COLOR0;
+			vec4 t0;
+			vec3 t1;
+			vec3 t2;
+			float t3;
+			float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t2.xyz = t0.xyz * t1.xyz;
+				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t2.xyz = vec3(t3) * t2.xyz;
+				vs_TEXCOORD1.y = t2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t2.y;
+				vs_TEXCOORD3.y = t2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform  sampler2D _MainTex;
+			uniform  sampler2D _Emissive;
+			uniform  sampler2D _LightTexture0;
+			uniform  sampler2D _LightTextureB0;
+			in  vec4 vs_TEXCOORD0;
+			in  vec3 vs_TEXCOORD1;
+			in  vec3 vs_TEXCOORD2;
+			in  vec3 vs_TEXCOORD3;
+			in  vec3 vs_TEXCOORD4;
+			in  vec4 vs_COLOR0;
+			out vec4 SV_Target0;
+			vec2 t0;
+			vec4 t1;
+			vec4 t2;
+			lowp vec4 t10_2;
+			vec3 t3;
+			lowp vec4 t10_3;
+			vec3 t4;
+			vec3 t5;
+			vec2 t8;
+			float t9;
+			float t13;
+			bool tb13;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t8.xy = clamp(t8.xy, 0.0, 1.0);
+				t1.xy = t8.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t8.yy * t1.xy + t0.xy;
+				t8.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t8.x = t1.x * t8.x + t0.y;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t8.x = vs_COLOR0.w;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t13 = dot(t1.xyz, t1.xyz);
+				t13 = inversesqrt(t13);
+				t1.xyz = vec3(t13) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = vec3(t13) * t2.xyz;
+				t3.x = vs_TEXCOORD1.z;
+				t3.y = vs_TEXCOORD2.z;
+				t3.z = vs_TEXCOORD3.z;
+				t13 = dot(t3.xyz, t3.xyz);
+				t13 = inversesqrt(t13);
+				t3.xyz = vec3(t13) * t3.xyz;
+				t1.w = dot(t3.xyz, t2.xyz);
+				t1.x = dot(t3.xyz, t1.xyz);
+				t1.xy = max(t1.xw, vec2(0.0, 0.0));
+				t5.x = log2(t1.y);
+				t9 = _Shininess * 128.0;
+				t5.x = t5.x * t9;
+				t5.x = exp2(t5.x);
+				t0.x = t0.x * t5.x;
+				t5.xyz = t0.xxx * _SpecColor.xyz;
+				t4.xyz = t4.xyz * t1.xxx + t5.xyz;
+				t4.xyz = t4.xyz * _LightColor0.xyz;
+				t1 = vs_TEXCOORD4.yyyy * _LightMatrix0[1];
+				t1 = _LightMatrix0[0] * vs_TEXCOORD4.xxxx + t1;
+				t1 = _LightMatrix0[2] * vs_TEXCOORD4.zzzz + t1;
+				t1 = t1 + _LightMatrix0[3];
+				t2.xy = t1.xy / t1.ww;
+				t2.xy = t2.xy + vec2(0.5, 0.5);
+				t10_2 = texture(_LightTexture0, t2.xy);
+				tb13 = 0.0<t1.z;
+				t1.x = dot(t1.xyz, t1.xyz);
+				t10_3 = texture(_LightTextureB0, t1.xx);
+				t1.x = tb13 ? 1.0 : float(0.0);
+				t1.x = t10_2.w * t1.x;
+				t1.x = t10_3.w * t1.x;
+				SV_Target0.xyz = t4.xyz * t1.xxx;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t4.x;
+				SV_Target0.w = t0.x * t1.x + _Opacity;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "opengl " {
+			// Stats: 51 math, 4 textures
+			Keywords{ "POINT_COOKIE" }
+				"!!GLSL#version 120
+
+#ifdef VERTEX
+
+				uniform mat4 _Object2World;
+			uniform mat4 _World2Object;
+			uniform vec4 unity_WorldTransformParams;
+			uniform vec4 _MainTex_ST;
+			uniform vec4 _Emissive_ST;
+			attribute vec4 TANGENT;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec4 tmpvar_1;
+				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				vec4 v_2;
+				v_2.x = _World2Object[0].x;
+				v_2.y = _World2Object[1].x;
+				v_2.z = _World2Object[2].x;
+				v_2.w = _World2Object[3].x;
+				vec4 v_3;
+				v_3.x = _World2Object[0].y;
+				v_3.y = _World2Object[1].y;
+				v_3.z = _World2Object[2].y;
+				v_3.w = _World2Object[3].y;
+				vec4 v_4;
+				v_4.x = _World2Object[0].z;
+				v_4.y = _World2Object[1].z;
+				v_4.z = _World2Object[2].z;
+				v_4.w = _World2Object[3].z;
+				vec3 tmpvar_5;
+				tmpvar_5 = normalize(((
+					(v_2.xyz * gl_Normal.x)
+					+
+					(v_3.xyz * gl_Normal.y)
+					) + (v_4.xyz * gl_Normal.z)));
+				mat3 tmpvar_6;
+				tmpvar_6[0] = _Object2World[0].xyz;
+				tmpvar_6[1] = _Object2World[1].xyz;
+				tmpvar_6[2] = _Object2World[2].xyz;
+				vec3 tmpvar_7;
+				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
+				vec3 tmpvar_8;
+				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
+				vec3 tmpvar_9;
+				tmpvar_9.x = tmpvar_7.x;
+				tmpvar_9.y = tmpvar_8.x;
+				tmpvar_9.z = tmpvar_5.x;
+				vec3 tmpvar_10;
+				tmpvar_10.x = tmpvar_7.y;
+				tmpvar_10.y = tmpvar_8.y;
+				tmpvar_10.z = tmpvar_5.y;
+				vec3 tmpvar_11;
+				tmpvar_11.x = tmpvar_7.z;
+				tmpvar_11.y = tmpvar_8.z;
+				tmpvar_11.z = tmpvar_5.z;
+				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
+				xlv_TEXCOORD0 = tmpvar_1;
+				xlv_TEXCOORD1 = tmpvar_9;
+				xlv_TEXCOORD2 = tmpvar_10;
+				xlv_TEXCOORD3 = tmpvar_11;
+				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
+				xlv_COLOR0 = gl_Color;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform vec3 _WorldSpaceCameraPos;
+			uniform vec4 _WorldSpaceLightPos0;
+			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
+			uniform samplerCube _LightTexture0;
+			uniform mat4 _LightMatrix0;
+			uniform sampler2D _LightTextureB0;
+			uniform float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform float _Opacity;
+			uniform vec4 _BurnColor;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec3 worldN_1;
+				vec3 tmpvar_2;
+				tmpvar_2 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
+				vec4 tmpvar_3;
+				tmpvar_3 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_4;
+				tmpvar_4 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				vec2 tmpvar_5;
+				tmpvar_5.x = tmpvar_3.x;
+				tmpvar_5.y = tmpvar_4.x;
+				vec2 tmpvar_6;
+				tmpvar_6.x = tmpvar_3.y;
+				tmpvar_6.y = tmpvar_4.y;
+				vec2 tmpvar_7;
+				tmpvar_7.x = tmpvar_3.z;
+				tmpvar_7.y = tmpvar_4.z;
+				vec2 tmpvar_8;
+				tmpvar_8.x = tmpvar_3.w;
+				tmpvar_8.y = tmpvar_4.w;
+				vec2 tmpvar_9;
+				float tmpvar_10;
+				tmpvar_10 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_9 = mix(mix(tmpvar_5, tmpvar_6, vec2(clamp(tmpvar_10, 0.0, 1.0))), mix(tmpvar_7, tmpvar_8, vec2(clamp(
+					(tmpvar_10 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_10 - 1.0), 0.0, 1.0)));
+				vec4 tmpvar_11;
+				tmpvar_11.w = 1.0;
+				tmpvar_11.xyz = xlv_TEXCOORD4;
+				vec3 tmpvar_12;
+				tmpvar_12 = (_LightMatrix0 * tmpvar_11).xyz;
+				float tmpvar_13;
+				tmpvar_13 = (texture2D (_LightTextureB0, vec2(dot(tmpvar_12, tmpvar_12))).w * textureCube(_LightTexture0, tmpvar_12).w);
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				vec4 c_14;
+				vec3 tmpvar_15;
+				tmpvar_15 = normalize(worldN_1);
+				float tmpvar_16;
+				tmpvar_16 = (pow(max(0.0,
+					dot(tmpvar_15, normalize((tmpvar_2 + normalize(
+					(_WorldSpaceCameraPos - xlv_TEXCOORD4)
+					))))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_9.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_9.y));
+				c_14.xyz = ((_LightColor0.xyz * (
+					((mix(tmpvar_9.xxx, mix(
+						mix(vec3(clamp((tmpvar_9.x + (
+						(1.0 - tmpvar_9.y)
+							*
+							(tmpvar_9.x * tmpvar_9.x)
+							)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_9.yyy)
+						, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz) * max(0.0, dot(tmpvar_15, tmpvar_2)))
+					+
+					(tmpvar_16 * _SpecColor.xyz)
+					)) * tmpvar_13);
+				c_14.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_16 * tmpvar_13)));
+				gl_FragData[0] = c_14;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "d3d9 " {
+			// Stats: 35 math
+			Keywords{ "POINT_COOKIE" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				Matrix 4[_Object2World] 3
+				Matrix 7[_World2Object] 3
+				Matrix 0[glstate_matrix_mvp]
+				Vector 12[_Emissive_ST]
+				Vector 11[_MainTex_ST]
+				Vector 10[unity_WorldTransformParams]
+				"vs_3_0
+				dcl_position v0
+				dcl_tangent v1
+				dcl_normal v2
+				dcl_texcoord v3
+				dcl_texcoord1 v4
+				dcl_color v5
+				dcl_position o0
+				dcl_texcoord o1
+				dcl_texcoord1 o2.xyz
+				dcl_texcoord2 o3.xyz
+				dcl_texcoord3 o4.xyz
+				dcl_texcoord4 o5.xyz
+				dcl_color o6
+				dp4 o0.x, c0, v0
+				dp4 o0.y, c1, v0
+				dp4 o0.z, c2, v0
+				dp4 o0.w, c3, v0
+				mad o1.xy, v3, c11, c11.zwzw
+				mad o1.zw, v4.xyxy, c12.xyxy, c12
+				dp4 o5.x, c4, v0
+				dp4 o5.y, c5, v0
+				dp4 o5.z, c6, v0
+				dp3 r0.z, c4, v1
+				dp3 r0.x, c5, v1
+				dp3 r0.y, c6, v1
+				dp3 r0.w, r0, r0
+				rsq r0.w, r0.w
+				mul r0.xyz, r0.w, r0
+				mov o2.x, r0.z
+				mul r1.xyz, c8.zxyw, v2.y
+				mad r1.xyz, c7.zxyw, v2.x, r1
+				mad r1.xyz, c9.zxyw, v2.z, r1
+				dp3 r0.w, r1, r1
+				rsq r0.w, r0.w
+				mul r1.xyz, r0.w, r1
+				mul r2.xyz, r0, r1
+				mad r2.xyz, r1.zxyw, r0.yzxw, -r2
+				mul r0.z, c10.w, v1.w
+				mul r2.xyz, r0.z, r2
+				mov o2.y, r2.x
+				mov o2.z, r1.y
+				mov o3.x, r0.x
+				mov o4.x, r0.y
+				mov o3.y, r2.y
+				mov o4.y, r2.z
+				mov o3.z, r1.z
+				mov o4.z, r1.x
+				mov o6, v5
+
+				"
+		}
+		SubProgram "d3d11 " {
+			// Stats: 34 math
+			Keywords{ "POINT_COOKIE" }
+				Bind "vertex" Vertex
+				Bind "color" Color
+				Bind "normal" Normal
+				Bind "texcoord" TexCoord0
+				Bind "texcoord1" TexCoord1
+				Bind "tangent" TexCoord4
+				ConstBuffer "$Globals" 304
+				Vector 272[_MainTex_ST]
+				Vector 288[_Emissive_ST]
+				ConstBuffer "UnityPerDraw" 352
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 192[_Object2World]
+				Matrix 256[_World2Object]
+				Vector 336[unity_WorldTransformParams]
+				BindCB  "$Globals" 0
+				BindCB  "UnityPerDraw" 1
+				"vs_4_0
+				root12:aaacaaaa
+				eefiecedgdmnpmfdjmlgkfdjcbocadegflimgmfgabaaaaaaaeaiaaaaadaaaaaa
+				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
+				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
+				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
+				ahahaaaaoaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaadaaaaaaapadaaaaoaaaaaaa
+				abaaaaaaaaaaaaaaadaaaaaaaeaaaaaaapadaaaaoaaaaaaaacaaaaaaaaaaaaaa
+				adaaaaaaafaaaaaaapaaaaaaoaaaaaaaadaaaaaaaaaaaaaaadaaaaaaagaaaaaa
+				apaaaaaaojaaaaaaaaaaaaaaaaaaaaaaadaaaaaaahaaaaaaapapaaaafaepfdej
+				feejepeoaafeebeoehefeofeaaeoepfcenebemaafeeffiedepepfceeaaedepem
+				epfcaaklepfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaaaaaaaaaaabaaaaaa
+				adaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaaadaaaaaaabaaaaaa
+				apaaaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaaahaiaaaalmaaaaaa
+				acaaaaaaaaaaaaaaadaaaaaaadaaaaaaahaiaaaalmaaaaaaadaaaaaaaaaaaaaa
+				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
+				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
+				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
+				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabdaaaaaafjaaaaaeegiocaaa
+				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
+				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
+				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
+				gfaaaaadpccabaaaabaaaaaagfaaaaadhccabaaaacaaaaaagfaaaaadhccabaaa
+				adaaaaaagfaaaaadhccabaaaaeaaaaaagfaaaaadhccabaaaafaaaaaagfaaaaad
+				pccabaaaagaaaaaagiaaaaacadaaaaaadiaaaaaipcaabaaaaaaaaaaafgbfbaaa
+				aaaaaaaaegiocaaaabaaaaaaabaaaaaadcaaaaakpcaabaaaaaaaaaaaegiocaaa
+				abaaaaaaaaaaaaaaagbabaaaaaaaaaaaegaobaaaaaaaaaaadcaaaaakpcaabaaa
+				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
+				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
+				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
+				aaaaaaaabbaaaaaaogikcaaaaaaaaaaabbaaaaaadcaaaaalmccabaaaabaaaaaa
+				agbebaaaaeaaaaaaagiecaaaaaaaaaaabcaaaaaakgiocaaaaaaaaaaabcaaaaaa
+				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
+				diaaaaaiccaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabaaaaaaa
+				diaaaaaiecaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabbaaaaaa
+				diaaaaaibcaabaaaabaaaaaabkbabaaaacaaaaaabkiacaaaabaaaaaabcaaaaaa
+				aaaaaaahhcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaai
+				ccaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabaaaaaaadiaaaaai
+				ecaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabbaaaaaadiaaaaai
+				bcaabaaaabaaaaaackbabaaaacaaaaaackiacaaaabaaaaaabcaaaaaaaaaaaaah
+				hcaabaaaaaaaaaaaegacbaaaaaaaaaaaegacbaaaabaaaaaabaaaaaahicaabaaa
+				aaaaaaaaegacbaaaaaaaaaaaegacbaaaaaaaaaaaeeaaaaaficaabaaaaaaaaaaa
+				dkaabaaaaaaaaaaadiaaaaahhcaabaaaaaaaaaaapgapbaaaaaaaaaaaegacbaaa
+				aaaaaaaadgaaaaafeccabaaaacaaaaaabkaabaaaaaaaaaaadiaaaaaihcaabaaa
+				abaaaaaafgbfbaaaabaaaaaajgiecaaaabaaaaaaanaaaaaadcaaaaakhcaabaaa
+				abaaaaaajgiecaaaabaaaaaaamaaaaaaagbabaaaabaaaaaaegacbaaaabaaaaaa
+				dcaaaaakhcaabaaaabaaaaaajgiecaaaabaaaaaaaoaaaaaakgbkbaaaabaaaaaa
+				egacbaaaabaaaaaabaaaaaahicaabaaaaaaaaaaaegacbaaaabaaaaaaegacbaaa
+				abaaaaaaeeaaaaaficaabaaaaaaaaaaadkaabaaaaaaaaaaadiaaaaahhcaabaaa
+				abaaaaaapgapbaaaaaaaaaaaegacbaaaabaaaaaadiaaaaahhcaabaaaacaaaaaa
+				egacbaaaaaaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaacaaaaaacgajbaaa
+				aaaaaaaajgaebaaaabaaaaaaegacbaiaebaaaaaaacaaaaaadiaaaaaiccaabaaa
+				aaaaaaaadkbabaaaabaaaaaadkiacaaaabaaaaaabfaaaaaadiaaaaahhcaabaaa
+				acaaaaaafgafbaaaaaaaaaaaegacbaaaacaaaaaadgaaaaafcccabaaaacaaaaaa
+				akaabaaaacaaaaaadgaaaaafbccabaaaacaaaaaackaabaaaabaaaaaadgaaaaaf
+				eccabaaaadaaaaaackaabaaaaaaaaaaadgaaaaafeccabaaaaeaaaaaaakaabaaa
+				aaaaaaaadgaaaaafbccabaaaadaaaaaaakaabaaaabaaaaaadgaaaaafbccabaaa
+				aeaaaaaabkaabaaaabaaaaaadgaaaaafcccabaaaadaaaaaabkaabaaaacaaaaaa
+				dgaaaaafcccabaaaaeaaaaaackaabaaaacaaaaaadiaaaaaihcaabaaaaaaaaaaa
+				fgbfbaaaaaaaaaaaegiccaaaabaaaaaaanaaaaaadcaaaaakhcaabaaaaaaaaaaa
+				egiccaaaabaaaaaaamaaaaaaagbabaaaaaaaaaaaegacbaaaaaaaaaaadcaaaaak
+				hcaabaaaaaaaaaaaegiccaaaabaaaaaaaoaaaaaakgbkbaaaaaaaaaaaegacbaaa
+				aaaaaaaadcaaaaakhccabaaaafaaaaaaegiccaaaabaaaaaaapaaaaaapgbpbaaa
+				aaaaaaaaegacbaaaaaaaaaaadgaaaaafpccabaaaagaaaaaaegbobaaaahaaaaaa
+				doaaaaab"
+		}
+		SubProgram "gles " {
+			// Stats: 51 math, 4 textures
+			Keywords{ "POINT_COOKIE" }
+				"!!GLES
+				#version 100
+
+#ifdef VERTEX
+				attribute vec4 _glesTANGENT;
+			attribute vec4 _glesVertex;
+			attribute vec4 _glesColor;
+			attribute vec3 _glesNormal;
+			attribute vec4 _glesMultiTexCoord0;
+			attribute vec4 _glesMultiTexCoord1;
+			uniform highp mat4 glstate_matrix_mvp;
+			uniform highp mat4 _Object2World;
+			uniform highp mat4 _World2Object;
+			uniform highp vec4 unity_WorldTransformParams;
+			uniform highp vec4 _MainTex_ST;
+			uniform highp vec4 _Emissive_ST;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp float tangentSign_1;
+				lowp vec3 worldTangent_2;
+				lowp vec3 worldNormal_3;
+				highp vec4 tmpvar_4;
+				tmpvar_4.xy = ((_glesMultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_4.zw = ((_glesMultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				highp vec4 v_5;
+				v_5.x = _World2Object[0].x;
+				v_5.y = _World2Object[1].x;
+				v_5.z = _World2Object[2].x;
+				v_5.w = _World2Object[3].x;
+				highp vec4 v_6;
+				v_6.x = _World2Object[0].y;
+				v_6.y = _World2Object[1].y;
+				v_6.z = _World2Object[2].y;
+				v_6.w = _World2Object[3].y;
+				highp vec4 v_7;
+				v_7.x = _World2Object[0].z;
+				v_7.y = _World2Object[1].z;
+				v_7.z = _World2Object[2].z;
+				v_7.w = _World2Object[3].z;
+				highp vec3 tmpvar_8;
+				tmpvar_8 = normalize(((
+					(v_5.xyz * _glesNormal.x)
+					+
+					(v_6.xyz * _glesNormal.y)
+					) + (v_7.xyz * _glesNormal.z)));
+				worldNormal_3 = tmpvar_8;
+				highp mat3 tmpvar_9;
+				tmpvar_9[0] = _Object2World[0].xyz;
+				tmpvar_9[1] = _Object2World[1].xyz;
+				tmpvar_9[2] = _Object2World[2].xyz;
+				highp vec3 tmpvar_10;
+				tmpvar_10 = normalize((tmpvar_9 * _glesTANGENT.xyz));
+				worldTangent_2 = tmpvar_10;
+				highp float tmpvar_11;
+				tmpvar_11 = (_glesTANGENT.w * unity_WorldTransformParams.w);
+				tangentSign_1 = tmpvar_11;
+				lowp vec3 tmpvar_12;
+				tmpvar_12 = (((worldNormal_3.yzx * worldTangent_2.zxy) - (worldNormal_3.zxy * worldTangent_2.yzx)) * tangentSign_1);
+				lowp vec3 tmpvar_13;
+				tmpvar_13.x = worldTangent_2.x;
+				tmpvar_13.y = tmpvar_12.x;
+				tmpvar_13.z = worldNormal_3.x;
+				lowp vec3 tmpvar_14;
+				tmpvar_14.x = worldTangent_2.y;
+				tmpvar_14.y = tmpvar_12.y;
+				tmpvar_14.z = worldNormal_3.y;
+				lowp vec3 tmpvar_15;
+				tmpvar_15.x = worldTangent_2.z;
+				tmpvar_15.y = tmpvar_12.z;
+				tmpvar_15.z = worldNormal_3.z;
+				gl_Position = (glstate_matrix_mvp * _glesVertex);
+				xlv_TEXCOORD0 = tmpvar_4;
+				xlv_TEXCOORD1 = tmpvar_13;
+				xlv_TEXCOORD2 = tmpvar_14;
+				xlv_TEXCOORD3 = tmpvar_15;
+				xlv_TEXCOORD4 = (_Object2World * _glesVertex).xyz;
+				xlv_COLOR0 = _glesColor;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform highp vec3 _WorldSpaceCameraPos;
+			uniform highp vec4 _WorldSpaceLightPos0;
+			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
+			uniform lowp samplerCube _LightTexture0;
+			uniform mediump mat4 _LightMatrix0;
+			uniform sampler2D _LightTextureB0;
+			uniform mediump float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform highp float _Opacity;
+			uniform highp vec4 _BurnColor;
+			varying highp vec4 xlv_TEXCOORD0;
+			varying lowp vec3 xlv_TEXCOORD1;
+			varying lowp vec3 xlv_TEXCOORD2;
+			varying lowp vec3 xlv_TEXCOORD3;
+			varying highp vec3 xlv_TEXCOORD4;
+			varying lowp vec4 xlv_COLOR0;
+			void main()
+			{
+				lowp vec3 worldN_1;
+				lowp vec3 worldViewDir_2;
+				lowp vec3 lightDir_3;
+				highp vec4 tmpvar_4;
+				highp vec3 tmpvar_5;
+				tmpvar_5 = normalize((_WorldSpaceLightPos0.xyz - xlv_TEXCOORD4));
+				lightDir_3 = tmpvar_5;
+				highp vec3 tmpvar_6;
+				tmpvar_6 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
+				worldViewDir_2 = tmpvar_6;
+				tmpvar_4 = xlv_COLOR0;
+				lowp vec3 tmpvar_7;
+				lowp float tmpvar_8;
+				lowp float tmpvar_9;
+				highp vec4 mask_10;
+				highp vec4 color_11;
+				lowp vec4 tmpvar_12;
+				tmpvar_12 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_11 = tmpvar_12;
+				lowp vec4 tmpvar_13;
+				tmpvar_13 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_10 = tmpvar_13;
+				highp vec2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
+				highp vec2 tmpvar_15;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
+				highp vec2 tmpvar_16;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
+				highp vec2 tmpvar_17;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
+				highp vec2 tmpvar_18;
+				highp float tmpvar_19;
+				tmpvar_19 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, vec2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, vec2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				highp vec3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(vec3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+				), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = (tmpvar_20 * _BurnColor.xyz);
+				highp float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = ((tmpvar_21 + 0.2) * tmpvar_18.y);
+				tmpvar_9 = _Opacity;
+				highp vec4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = xlv_TEXCOORD4;
+				highp vec3 tmpvar_23;
+				tmpvar_23 = (_LightMatrix0 * tmpvar_22).xyz;
+				highp float tmpvar_24;
+				tmpvar_24 = dot(tmpvar_23, tmpvar_23);
+				lowp float tmpvar_25;
+				tmpvar_25 = (texture2D (_LightTextureB0, vec2(tmpvar_24)).w * textureCube(_LightTexture0, tmpvar_23).w);
+				worldN_1.x = xlv_TEXCOORD1.z;
+				worldN_1.y = xlv_TEXCOORD2.z;
+				worldN_1.z = xlv_TEXCOORD3.z;
+				mediump vec3 lightDir_26;
+				lightDir_26 = lightDir_3;
+				mediump vec3 viewDir_27;
+				viewDir_27 = worldViewDir_2;
+				mediump float atn_28;
+				atn_28 = tmpvar_25;
+				lowp vec4 c_29;
+				lowp float spec_30;
+				lowp float diff_31;
+				lowp vec3 halfDir_32;
+				lowp vec3 tmpvar_33;
+				tmpvar_33 = normalize(worldN_1);
+				mediump vec3 tmpvar_34;
+				tmpvar_34 = normalize((lightDir_26 + viewDir_27));
+				halfDir_32 = tmpvar_34;
+				mediump float tmpvar_35;
+				tmpvar_35 = max(0.0, dot(tmpvar_33, lightDir_26));
+				diff_31 = tmpvar_35;
+				lowp float tmpvar_36;
+				tmpvar_36 = max(0.0, dot(tmpvar_33, halfDir_32));
+				mediump float tmpvar_37;
+				tmpvar_37 = (pow(tmpvar_36, (_Shininess * 128.0)) * tmpvar_8);
+				spec_30 = tmpvar_37;
+				c_29.xyz = ((_LightColor0.xyz * (
+					(tmpvar_7 * diff_31)
+					+
+					(spec_30 * _SpecColor.xyz)
+					)) * atn_28);
+				c_29.w = (tmpvar_9 + ((_LightColor0.w * _SpecColor.w) * (spec_30 * atn_28)));
+				gl_FragData[0] = c_29;
+			}
+
+
+#endif
+			"
+		}
+		SubProgram "gles3 " {
+			Keywords{ "POINT_COOKIE" }
+				"!!GLES3
+#ifdef VERTEX
+				#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in highp vec4 in_POSITION0;
+			in highp vec4 in_TANGENT0;
+			in highp vec3 in_NORMAL0;
+			in highp vec4 in_TEXCOORD0;
+			in highp vec4 in_TEXCOORD1;
+			in lowp vec4 in_COLOR0;
+			out highp vec4 vs_TEXCOORD0;
+			out lowp vec3 vs_TEXCOORD1;
+			out lowp vec3 vs_TEXCOORD2;
+			out lowp vec3 vs_TEXCOORD3;
+			out highp vec3 vs_TEXCOORD4;
+			out lowp vec4 vs_COLOR0;
+			highp vec4 t0;
+			highp vec3 t1;
+			lowp vec3 t10_2;
+			highp float t3;
+			highp float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t10_2.xyz = t0.xyz * t1.xyz;
+				t10_2.xyz = t0.zxy * t1.yzx + (-t10_2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t10_2.xyz = vec3(t3) * t10_2.xyz;
+				vs_TEXCOORD1.y = t10_2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t10_2.y;
+				vs_TEXCOORD3.y = t10_2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 300 es
+				precision highp float;
+			precision highp int;
+			uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	mediump vec4 unity_4LightAtten0;
+			uniform 	mediump vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	mediump vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	mediump vec4 unity_SHAr;
+			uniform 	mediump vec4 unity_SHAg;
+			uniform 	mediump vec4 unity_SHAb;
+			uniform 	mediump vec4 unity_SHBr;
+			uniform 	mediump vec4 unity_SHBg;
+			uniform 	mediump vec4 unity_SHBb;
+			uniform 	mediump vec4 unity_SHC;
+			uniform 	mediump vec3 unity_LightColor0;
+			uniform 	mediump vec3 unity_LightColor1;
+			uniform 	mediump vec3 unity_LightColor2;
+			uniform 	mediump vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	mediump vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	lowp vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	lowp vec4 unity_AmbientSky;
+			uniform 	lowp vec4 unity_AmbientEquator;
+			uniform 	lowp vec4 unity_AmbientGround;
+			uniform 	lowp vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	mediump vec4 unity_SpecCube1_HDR;
+			uniform 	lowp vec4 unity_ColorSpaceGrey;
+			uniform 	lowp vec4 unity_ColorSpaceDouble;
+			uniform 	mediump vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	mediump vec4 unity_ColorSpaceLuminance;
+			uniform 	mediump vec4 unity_Lightmap_HDR;
+			uniform 	mediump vec4 unity_DynamicLightmap_HDR;
+			uniform 	lowp vec4 _LightColor0;
+			uniform 	lowp vec4 _SpecColor;
+			uniform 	mediump vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mediump mat4 _LightMatrix0;
+			uniform 	mediump float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform lowp sampler2D _MainTex;
+			uniform lowp sampler2D _Emissive;
+			uniform lowp sampler2D _LightTextureB0;
+			uniform lowp samplerCube _LightTexture0;
+			in highp vec4 vs_TEXCOORD0;
+			in lowp vec3 vs_TEXCOORD1;
+			in lowp vec3 vs_TEXCOORD2;
+			in lowp vec3 vs_TEXCOORD3;
+			in highp vec3 vs_TEXCOORD4;
+			in lowp vec4 vs_COLOR0;
+			layout(location = 0) out lowp vec4 SV_Target0;
+			highp vec2 t0;
+			mediump float t16_0;
+			lowp float t10_0;
+			highp vec4 t1;
+			mediump vec4 t16_1;
+			highp vec4 t2;
+			lowp vec4 t10_3;
+			mediump vec4 t16_4;
+			lowp vec3 t10_5;
+			highp vec3 t6;
+			lowp float t10_6;
+			mediump float t16_10;
+			highp vec2 t12;
+			mediump float t16_12;
+			mediump float t16_16;
+			highp float t19;
+			mediump float t16_22;
+			lowp float t10_23;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t12.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t12.xy = clamp(t12.xy, 0.0, 1.0);
+				t1.xy = t12.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t12.yy * t1.xy + t0.xy;
+				t12.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t12.x = t1.x * t12.x + t0.y;
+				t12.x = clamp(t12.x, 0.0, 1.0);
+				t1.xzw = (-t12.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t12.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t16_12 = vs_COLOR0.w;
+				t16_12 = clamp(t16_12, 0.0, 1.0);
+				t6.xyz = vec3(t16_12) * t1.xzw + t0.yyy;
+				t6.xyz = t6.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t19 = dot(t1.xyz, t1.xyz);
+				t19 = inversesqrt(t19);
+				t1.xyz = vec3(t19) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t19 = dot(t2.xyz, t2.xyz);
+				t19 = inversesqrt(t19);
+				t16_4.xyz = t2.xyz * vec3(t19) + t1.xyz;
+				t16_22 = dot(t16_4.xyz, t16_4.xyz);
+				t16_22 = inversesqrt(t16_22);
+				t16_4.xyz = vec3(t16_22) * t16_4.xyz;
+				t10_5.x = vs_TEXCOORD1.z;
+				t10_5.y = vs_TEXCOORD2.z;
+				t10_5.z = vs_TEXCOORD3.z;
+				t10_23 = dot(t10_5.xyz, t10_5.xyz);
+				t10_23 = inversesqrt(t10_23);
+				t10_5.xyz = vec3(t10_23) * t10_5.xyz;
+				t10_23 = dot(t10_5.xyz, t16_4.xyz);
+				t16_4.x = dot(t10_5.xyz, t1.xyz);
+				t16_4.x = max(t16_4.x, 0.0);
+				t10_5.x = max(t10_23, 0.0);
+				t16_10 = log2(t10_5.x);
+				t16_16 = _Shininess * 128.0;
+				t16_10 = t16_10 * t16_16;
+				t16_10 = exp2(t16_10);
+				t16_10 = t0.x * t16_10;
+				t10_5.xyz = vec3(t16_10) * _SpecColor.xyz;
+				t10_5.xyz = t6.xyz * t16_4.xxx + t10_5.xyz;
+				t10_5.xyz = t10_5.xyz * _LightColor0.xyz;
+				t16_4.xzw = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
+				t16_4.xzw = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t16_4.xzw;
+				t16_4.xzw = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t16_4.xzw;
+				t16_4.xzw = t16_4.xzw + _LightMatrix0[3].xyz;
+				t16_0 = dot(t16_4.xzw, t16_4.xzw);
+				t10_6 = texture(_LightTexture0, t16_4.xzw).w;
+				t10_0 = texture(_LightTextureB0, vec2(t16_0)).w;
+				t16_0 = t10_6 * t10_0;
+				t16_1.xyz = vec3(t16_0) * t10_5.xyz;
+				t10_5.x = _LightColor0.w * _SpecColor.w;
+				t10_5.x = t16_10 * t10_5.x;
+				t16_1.w = t10_5.x * t16_0 + _Opacity;
+				SV_Target0 = t16_1;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "metal " {
+			// Stats: 19 math
+			Keywords{ "POINT_COOKIE" }
+				Bind "tangent" ATTR0
+				Bind "vertex" ATTR1
+				Bind "color" ATTR2
+				Bind "normal" ATTR3
+				Bind "texcoord" ATTR4
+				Bind "texcoord1" ATTR5
+				ConstBuffer "$Globals" 240
+				Matrix 0[glstate_matrix_mvp]
+				Matrix 64[_Object2World]
+				Matrix 128[_World2Object]
+				Vector 192[unity_WorldTransformParams]
+				Vector 208[_MainTex_ST]
+				Vector 224[_Emissive_ST]
+				"metal_vs
+#include <metal_stdlib>
+				using namespace metal;
+			struct xlatMtlShaderInput {
+				float4 _glesTANGENT[[attribute(0)]];
+				float4 _glesVertex[[attribute(1)]];
+				float4 _glesColor[[attribute(2)]];
+				float3 _glesNormal[[attribute(3)]];
+				float4 _glesMultiTexCoord0[[attribute(4)]];
+				float4 _glesMultiTexCoord1[[attribute(5)]];
+			};
+			struct xlatMtlShaderOutput {
+				float4 gl_Position[[position]];
+				float4 xlv_TEXCOORD0;
+				half3 xlv_TEXCOORD1;
+				half3 xlv_TEXCOORD2;
+				half3 xlv_TEXCOORD3;
+				float3 xlv_TEXCOORD4;
+				half4 xlv_COLOR0;
+			};
+			struct xlatMtlShaderUniform {
+				float4x4 glstate_matrix_mvp;
+				float4x4 _Object2World;
+				float4x4 _World2Object;
+				float4 unity_WorldTransformParams;
+				float4 _MainTex_ST;
+				float4 _Emissive_ST;
+			};
+			vertex xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]])
+			{
+				xlatMtlShaderOutput _mtl_o;
+				half4 tmpvar_1;
+				tmpvar_1 = half4(_mtl_i._glesColor);
+				half tangentSign_2;
+				half3 worldTangent_3;
+				half3 worldNormal_4;
+				float4 tmpvar_5;
+				tmpvar_5.xy = ((_mtl_i._glesMultiTexCoord0.xy * _mtl_u._MainTex_ST.xy) + _mtl_u._MainTex_ST.zw);
+				tmpvar_5.zw = ((_mtl_i._glesMultiTexCoord1.xy * _mtl_u._Emissive_ST.xy) + _mtl_u._Emissive_ST.zw);
+				float4 v_6;
+				v_6.x = _mtl_u._World2Object[0].x;
+				v_6.y = _mtl_u._World2Object[1].x;
+				v_6.z = _mtl_u._World2Object[2].x;
+				v_6.w = _mtl_u._World2Object[3].x;
+				float4 v_7;
+				v_7.x = _mtl_u._World2Object[0].y;
+				v_7.y = _mtl_u._World2Object[1].y;
+				v_7.z = _mtl_u._World2Object[2].y;
+				v_7.w = _mtl_u._World2Object[3].y;
+				float4 v_8;
+				v_8.x = _mtl_u._World2Object[0].z;
+				v_8.y = _mtl_u._World2Object[1].z;
+				v_8.z = _mtl_u._World2Object[2].z;
+				v_8.w = _mtl_u._World2Object[3].z;
+				float3 tmpvar_9;
+				tmpvar_9 = normalize(((
+					(v_6.xyz * _mtl_i._glesNormal.x)
+					+
+					(v_7.xyz * _mtl_i._glesNormal.y)
+					) + (v_8.xyz * _mtl_i._glesNormal.z)));
+				worldNormal_4 = half3(tmpvar_9);
+				float3x3 tmpvar_10;
+				tmpvar_10[0] = _mtl_u._Object2World[0].xyz;
+				tmpvar_10[1] = _mtl_u._Object2World[1].xyz;
+				tmpvar_10[2] = _mtl_u._Object2World[2].xyz;
+				float3 tmpvar_11;
+				tmpvar_11 = normalize((tmpvar_10 * _mtl_i._glesTANGENT.xyz));
+				worldTangent_3 = half3(tmpvar_11);
+				float tmpvar_12;
+				tmpvar_12 = (_mtl_i._glesTANGENT.w * _mtl_u.unity_WorldTransformParams.w);
+				tangentSign_2 = half(tmpvar_12);
+				half3 tmpvar_13;
+				tmpvar_13 = (((worldNormal_4.yzx * worldTangent_3.zxy) - (worldNormal_4.zxy * worldTangent_3.yzx)) * tangentSign_2);
+				half3 tmpvar_14;
+				tmpvar_14.x = worldTangent_3.x;
+				tmpvar_14.y = tmpvar_13.x;
+				tmpvar_14.z = worldNormal_4.x;
+				half3 tmpvar_15;
+				tmpvar_15.x = worldTangent_3.y;
+				tmpvar_15.y = tmpvar_13.y;
+				tmpvar_15.z = worldNormal_4.y;
+				half3 tmpvar_16;
+				tmpvar_16.x = worldTangent_3.z;
+				tmpvar_16.y = tmpvar_13.z;
+				tmpvar_16.z = worldNormal_4.z;
+				_mtl_o.gl_Position = (_mtl_u.glstate_matrix_mvp * _mtl_i._glesVertex);
+				_mtl_o.xlv_TEXCOORD0 = tmpvar_5;
+				_mtl_o.xlv_TEXCOORD1 = tmpvar_14;
+				_mtl_o.xlv_TEXCOORD2 = tmpvar_15;
+				_mtl_o.xlv_TEXCOORD3 = tmpvar_16;
+				_mtl_o.xlv_TEXCOORD4 = (_mtl_u._Object2World * _mtl_i._glesVertex).xyz;
+				_mtl_o.xlv_COLOR0 = tmpvar_1;
+				return _mtl_o;
+			}
+
+			"
+		}
+		SubProgram "glcore " {
+			Keywords{ "POINT_COOKIE" }
+				"!!GL3x
+#ifdef VERTEX
+				#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			in  vec4 in_POSITION0;
+			in  vec4 in_TANGENT0;
+			in  vec3 in_NORMAL0;
+			in  vec4 in_TEXCOORD0;
+			in  vec4 in_TEXCOORD1;
+			in  vec4 in_COLOR0;
+			out vec4 vs_TEXCOORD0;
+			out vec3 vs_TEXCOORD1;
+			out vec3 vs_TEXCOORD2;
+			out vec3 vs_TEXCOORD3;
+			out vec3 vs_TEXCOORD4;
+			out vec4 vs_COLOR0;
+			vec4 t0;
+			vec3 t1;
+			vec3 t2;
+			float t3;
+			float t9;
+			void main()
+			{
+				t0 = in_POSITION0.yyyy * glstate_matrix_mvp[1];
+				t0 = glstate_matrix_mvp[0] * in_POSITION0.xxxx + t0;
+				t0 = glstate_matrix_mvp[2] * in_POSITION0.zzzz + t0;
+				gl_Position = glstate_matrix_mvp[3] * in_POSITION0.wwww + t0;
+				vs_TEXCOORD0.xy = in_TEXCOORD0.xy * _MainTex_ST.xy + _MainTex_ST.zw;
+				vs_TEXCOORD0.zw = in_TEXCOORD1.xy * _Emissive_ST.xy + _Emissive_ST.zw;
+				t0.y = in_NORMAL0.x * _World2Object[0].x;
+				t0.z = in_NORMAL0.x * _World2Object[1].x;
+				t0.x = in_NORMAL0.x * _World2Object[2].x;
+				t1.y = in_NORMAL0.y * _World2Object[0].y;
+				t1.z = in_NORMAL0.y * _World2Object[1].y;
+				t1.x = in_NORMAL0.y * _World2Object[2].y;
+				t0.xyz = t0.xyz + t1.xyz;
+				t1.y = in_NORMAL0.z * _World2Object[0].z;
+				t1.z = in_NORMAL0.z * _World2Object[1].z;
+				t1.x = in_NORMAL0.z * _World2Object[2].z;
+				t0.xyz = t0.xyz + t1.xyz;
+				t9 = dot(t0.xyz, t0.xyz);
+				t9 = inversesqrt(t9);
+				t0.xyz = vec3(t9) * t0.xyz;
+				vs_TEXCOORD1.z = t0.y;
+				t1.xyz = in_TANGENT0.yyy * _Object2World[1].yzx;
+				t1.xyz = _Object2World[0].yzx * in_TANGENT0.xxx + t1.xyz;
+				t1.xyz = _Object2World[2].yzx * in_TANGENT0.zzz + t1.xyz;
+				t9 = dot(t1.xyz, t1.xyz);
+				t9 = inversesqrt(t9);
+				t1.xyz = vec3(t9) * t1.xyz;
+				t2.xyz = t0.xyz * t1.xyz;
+				t2.xyz = t0.zxy * t1.yzx + (-t2.xyz);
+				t3 = in_TANGENT0.w * unity_WorldTransformParams.w;
+				t2.xyz = vec3(t3) * t2.xyz;
+				vs_TEXCOORD1.y = t2.x;
+				vs_TEXCOORD1.x = t1.z;
+				vs_TEXCOORD2.z = t0.z;
+				vs_TEXCOORD3.z = t0.x;
+				vs_TEXCOORD2.x = t1.x;
+				vs_TEXCOORD3.x = t1.y;
+				vs_TEXCOORD2.y = t2.y;
+				vs_TEXCOORD3.y = t2.z;
+				t0.xyz = in_POSITION0.yyy * _Object2World[1].xyz;
+				t0.xyz = _Object2World[0].xyz * in_POSITION0.xxx + t0.xyz;
+				t0.xyz = _Object2World[2].xyz * in_POSITION0.zzz + t0.xyz;
+				vs_TEXCOORD4.xyz = _Object2World[3].xyz * in_POSITION0.www + t0.xyz;
+				vs_COLOR0 = in_COLOR0;
+				return;
+			}
+
+#endif
+#ifdef FRAGMENT
+			#version 150
+				#extension GL_ARB_shader_bit_encoding : enable
+				uniform 	vec4 _Time;
+			uniform 	vec4 _SinTime;
+			uniform 	vec4 _CosTime;
+			uniform 	vec4 unity_DeltaTime;
+			uniform 	vec3 _WorldSpaceCameraPos;
+			uniform 	vec4 _ProjectionParams;
+			uniform 	vec4 _ScreenParams;
+			uniform 	vec4 _ZBufferParams;
+			uniform 	vec4 unity_OrthoParams;
+			uniform 	vec4 unity_CameraWorldClipPlanes[6];
+			uniform 	mat4 unity_CameraProjection;
+			uniform 	mat4 unity_CameraInvProjection;
+			uniform 	vec4 _WorldSpaceLightPos0;
+			uniform 	vec4 _LightPositionRange;
+			uniform 	vec4 unity_4LightPosX0;
+			uniform 	vec4 unity_4LightPosY0;
+			uniform 	vec4 unity_4LightPosZ0;
+			uniform 	vec4 unity_4LightAtten0;
+			uniform 	vec4 unity_LightColor[8];
+			uniform 	vec4 unity_LightPosition[8];
+			uniform 	vec4 unity_LightAtten[8];
+			uniform 	vec4 unity_SpotDirection[8];
+			uniform 	vec4 unity_SHAr;
+			uniform 	vec4 unity_SHAg;
+			uniform 	vec4 unity_SHAb;
+			uniform 	vec4 unity_SHBr;
+			uniform 	vec4 unity_SHBg;
+			uniform 	vec4 unity_SHBb;
+			uniform 	vec4 unity_SHC;
+			uniform 	vec3 unity_LightColor0;
+			uniform 	vec3 unity_LightColor1;
+			uniform 	vec3 unity_LightColor2;
+			uniform 	vec3 unity_LightColor3;
+			uniform 	vec4 unity_ShadowSplitSpheres[4];
+			uniform 	vec4 unity_ShadowSplitSqRadii;
+			uniform 	vec4 unity_LightShadowBias;
+			uniform 	vec4 _LightSplitsNear;
+			uniform 	vec4 _LightSplitsFar;
+			uniform 	mat4 unity_World2Shadow[4];
+			uniform 	vec4 _LightShadowData;
+			uniform 	vec4 unity_ShadowFadeCenterAndType;
+			uniform 	mat4 glstate_matrix_mvp;
+			uniform 	mat4 glstate_matrix_modelview0;
+			uniform 	mat4 glstate_matrix_invtrans_modelview0;
+			uniform 	mat4 _Object2World;
+			uniform 	mat4 _World2Object;
+			uniform 	vec4 unity_LODFade;
+			uniform 	vec4 unity_WorldTransformParams;
+			uniform 	mat4 glstate_matrix_transpose_modelview0;
+			uniform 	mat4 glstate_matrix_projection;
+			uniform 	vec4 glstate_lightmodel_ambient;
+			uniform 	mat4 unity_MatrixV;
+			uniform 	mat4 unity_MatrixVP;
+			uniform 	vec4 unity_AmbientSky;
+			uniform 	vec4 unity_AmbientEquator;
+			uniform 	vec4 unity_AmbientGround;
+			uniform 	vec4 unity_FogColor;
+			uniform 	vec4 unity_FogParams;
+			uniform 	vec4 unity_LightmapST;
+			uniform 	vec4 unity_DynamicLightmapST;
+			uniform 	vec4 unity_SpecCube0_BoxMax;
+			uniform 	vec4 unity_SpecCube0_BoxMin;
+			uniform 	vec4 unity_SpecCube0_ProbePosition;
+			uniform 	vec4 unity_SpecCube0_HDR;
+			uniform 	vec4 unity_SpecCube1_BoxMax;
+			uniform 	vec4 unity_SpecCube1_BoxMin;
+			uniform 	vec4 unity_SpecCube1_ProbePosition;
+			uniform 	vec4 unity_SpecCube1_HDR;
+			uniform 	vec4 unity_ColorSpaceGrey;
+			uniform 	vec4 unity_ColorSpaceDouble;
+			uniform 	vec4 unity_ColorSpaceDielectricSpec;
+			uniform 	vec4 unity_ColorSpaceLuminance;
+			uniform 	vec4 unity_Lightmap_HDR;
+			uniform 	vec4 unity_DynamicLightmap_HDR;
+			uniform 	vec4 _LightColor0;
+			uniform 	vec4 _SpecColor;
+			uniform 	vec4 unity_LightGammaCorrectionConsts;
+			uniform 	mat4 _LightMatrix0;
+			uniform 	float _Shininess;
+			uniform 	float _Opacity;
+			uniform 	float _RimFalloff;
+			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
+			uniform 	vec4 _MainTex_ST;
+			uniform 	vec4 _Emissive_ST;
+			uniform  sampler2D _MainTex;
+			uniform  sampler2D _Emissive;
+			uniform  sampler2D _LightTextureB0;
+			uniform  samplerCube _LightTexture0;
+			in  vec4 vs_TEXCOORD0;
+			in  vec3 vs_TEXCOORD1;
+			in  vec3 vs_TEXCOORD2;
+			in  vec3 vs_TEXCOORD3;
+			in  vec3 vs_TEXCOORD4;
+			in  vec4 vs_COLOR0;
+			out vec4 SV_Target0;
+			vec2 t0;
+			vec4 t1;
+			mediump float t16_1;
+			lowp vec4 t10_1;
+			vec4 t2;
+			lowp vec4 t10_2;
+			vec3 t3;
+			lowp vec4 t10_3;
+			vec3 t4;
+			vec3 t5;
+			vec2 t8;
+			float t9;
+			float t13;
+			void main()
+			{
+				t0.x = vs_TEXCOORD0.z * 3.0;
+				t0.x = t0.x;
+				t0.x = clamp(t0.x, 0.0, 1.0);
+				t1 = texture(_MainTex, vs_TEXCOORD0.xy);
+				t2.yw = t1.yw;
+				t10_3 = texture(_Emissive, vs_TEXCOORD0.xy);
+				t2.xz = t10_3.yw;
+				t1.yw = t10_3.xz;
+				t2 = (-t1.yxwz) + t2;
+				t0.xy = t0.xx * t2.xy + t1.yx;
+				t8.xy = vs_TEXCOORD0.zz * vec2(3.0, 3.0) + vec2(-2.0, -1.0);
+				t8.xy = clamp(t8.xy, 0.0, 1.0);
+				t1.xy = t8.xx * t2.zw + t1.wz;
+				t1.xy = (-t0.xy) + t1.xy;
+				t0.xy = t8.yy * t1.xy + t0.xy;
+				t8.x = t0.y * t0.y;
+				t1.xy = (-t0.xx) + vec2(1.0, 1.39999998);
+				t8.x = t1.x * t8.x + t0.y;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t1.xzw = (-t8.xxx) + vs_COLOR0.xyz;
+				t1.xzw = t0.xxx * t1.xzw + t8.xxx;
+				t2.xyz = (-t1.xzw) + vs_COLOR0.xyz;
+				t1.xzw = vs_TEXCOORD0.www * t2.xyz + t1.xzw;
+				t1.xzw = (-t0.yyy) + t1.xzw;
+				t8.x = vs_COLOR0.w;
+				t8.x = clamp(t8.x, 0.0, 1.0);
+				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
+				t1.x = t1.y * t1.y;
+				t1.x = t1.y * t1.x + 0.200000003;
+				t0.x = t0.x * t1.x;
+				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceLightPos0.xyz;
+				t13 = dot(t1.xyz, t1.xyz);
+				t13 = inversesqrt(t13);
+				t1.xyz = vec3(t13) * t1.xyz;
+				t2.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = t2.xyz * vec3(t13) + t1.xyz;
+				t13 = dot(t2.xyz, t2.xyz);
+				t13 = inversesqrt(t13);
+				t2.xyz = vec3(t13) * t2.xyz;
+				t3.x = vs_TEXCOORD1.z;
+				t3.y = vs_TEXCOORD2.z;
+				t3.z = vs_TEXCOORD3.z;
+				t13 = dot(t3.xyz, t3.xyz);
+				t13 = inversesqrt(t13);
+				t3.xyz = vec3(t13) * t3.xyz;
+				t1.w = dot(t3.xyz, t2.xyz);
+				t1.x = dot(t3.xyz, t1.xyz);
+				t1.xy = max(t1.xw, vec2(0.0, 0.0));
+				t5.x = log2(t1.y);
+				t9 = _Shininess * 128.0;
+				t5.x = t5.x * t9;
+				t5.x = exp2(t5.x);
+				t0.x = t0.x * t5.x;
+				t5.xyz = t0.xxx * _SpecColor.xyz;
+				t4.xyz = t4.xyz * t1.xxx + t5.xyz;
+				t4.xyz = t4.xyz * _LightColor0.xyz;
+				t1.xyz = vs_TEXCOORD4.yyy * _LightMatrix0[1].xyz;
+				t1.xyz = _LightMatrix0[0].xyz * vs_TEXCOORD4.xxx + t1.xyz;
+				t1.xyz = _LightMatrix0[2].xyz * vs_TEXCOORD4.zzz + t1.xyz;
+				t1.xyz = t1.xyz + _LightMatrix0[3].xyz;
+				t13 = dot(t1.xyz, t1.xyz);
+				t10_2 = texture(_LightTexture0, t1.xyz);
+				t10_1 = texture(_LightTextureB0, vec2(t13));
+				t16_1 = t10_2.w * t10_1.w;
+				SV_Target0.xyz = t4.xyz * vec3(t16_1);
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t4.x;
+				SV_Target0.w = t0.x * t16_1 + _Opacity;
+				return;
+			}
+
+#endif
+			"
+		}
+		SubProgram "opengl " {
+			// Stats: 47 math, 3 textures
+			Keywords{ "DIRECTIONAL_COOKIE" }
+				"!!GLSL#version 120
+
+#ifdef VERTEX
+
+				uniform mat4 _Object2World;
+			uniform mat4 _World2Object;
+			uniform vec4 unity_WorldTransformParams;
+			uniform vec4 _MainTex_ST;
+			uniform vec4 _Emissive_ST;
+			attribute vec4 TANGENT;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec4 tmpvar_1;
+				tmpvar_1.xy = ((gl_MultiTexCoord0.xy * _MainTex_ST.xy) + _MainTex_ST.zw);
+				tmpvar_1.zw = ((gl_MultiTexCoord1.xy * _Emissive_ST.xy) + _Emissive_ST.zw);
+				vec4 v_2;
+				v_2.x = _World2Object[0].x;
+				v_2.y = _World2Object[1].x;
+				v_2.z = _World2Object[2].x;
+				v_2.w = _World2Object[3].x;
+				vec4 v_3;
+				v_3.x = _World2Object[0].y;
+				v_3.y = _World2Object[1].y;
+				v_3.z = _World2Object[2].y;
+				v_3.w = _World2Object[3].y;
+				vec4 v_4;
+				v_4.x = _World2Object[0].z;
+				v_4.y = _World2Object[1].z;
+				v_4.z = _World2Object[2].z;
+				v_4.w = _World2Object[3].z;
+				vec3 tmpvar_5;
+				tmpvar_5 = normalize(((
+					(v_2.xyz * gl_Normal.x)
+					+
+					(v_3.xyz * gl_Normal.y)
+					) + (v_4.xyz * gl_Normal.z)));
+				mat3 tmpvar_6;
+				tmpvar_6[0] = _Object2World[0].xyz;
+				tmpvar_6[1] = _Object2World[1].xyz;
+				tmpvar_6[2] = _Object2World[2].xyz;
+				vec3 tmpvar_7;
+				tmpvar_7 = normalize((tmpvar_6 * TANGENT.xyz));
+				vec3 tmpvar_8;
+				tmpvar_8 = (((tmpvar_5.yzx * tmpvar_7.zxy) - (tmpvar_5.zxy * tmpvar_7.yzx)) * (TANGENT.w * unity_WorldTransformParams.w));
+				vec3 tmpvar_9;
+				tmpvar_9.x = tmpvar_7.x;
+				tmpvar_9.y = tmpvar_8.x;
+				tmpvar_9.z = tmpvar_5.x;
+				vec3 tmpvar_10;
+				tmpvar_10.x = tmpvar_7.y;
+				tmpvar_10.y = tmpvar_8.y;
+				tmpvar_10.z = tmpvar_5.y;
+				vec3 tmpvar_11;
+				tmpvar_11.x = tmpvar_7.z;
+				tmpvar_11.y = tmpvar_8.z;
+				tmpvar_11.z = tmpvar_5.z;
+				gl_Position = (gl_ModelViewProjectionMatrix * gl_Vertex);
+				xlv_TEXCOORD0 = tmpvar_1;
+				xlv_TEXCOORD1 = tmpvar_9;
+				xlv_TEXCOORD2 = tmpvar_10;
+				xlv_TEXCOORD3 = tmpvar_11;
+				xlv_TEXCOORD4 = (_Object2World * gl_Vertex).xyz;
+				xlv_COLOR0 = gl_Color;
+			}
+
+
+#endif
+#ifdef FRAGMENT
+			uniform vec3 _WorldSpaceCameraPos;
+			uniform vec4 _WorldSpaceLightPos0;
+			uniform vec4 _LightColor0;
+			uniform vec4 _SpecColor;
+			uniform sampler2D _LightTexture0;
+			uniform mat4 _LightMatrix0;
+			uniform float _Shininess;
+			uniform sampler2D _MainTex;
+			uniform sampler2D _Emissive;
+			uniform float _Opacity;
+			uniform vec4 _BurnColor;
+			varying vec4 xlv_TEXCOORD0;
+			varying vec3 xlv_TEXCOORD1;
+			varying vec3 xlv_TEXCOORD2;
+			varying vec3 xlv_TEXCOORD3;
+			varying vec3 xlv_TEXCOORD4;
+			varying vec4 xlv_COLOR0;
+			void main()
+			{
+				vec3 worldN_1;
+				vec4 tmpvar_2;
+				tmpvar_2 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				vec4 tmpvar_3;
+				tmpvar_3 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				vec2 tmpvar_4;
+				tmpvar_4.x = tmpvar_2.x;
+				tmpvar_4.y = tmpvar_3.x;
+				vec2 tmpvar_5;
+				tmpvar_5.x = tmpvar_2.y;
+				tmpvar_5.y = tmpvar_3.y;
+				vec2 tmpvar_6;
+				tmpvar_6.x = tmpvar_2.z;
+				tmpvar_6.y = tmpvar_3.z;
+				vec2 tmpvar_7;
+				tmpvar_7.x = tmpvar_2.w;
+				tmpvar_7.y = tmpvar_3.w;
+				vec2 tmpvar_8;
+				float tmpvar_9;
+				tmpvar_9 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_8 = mix(mix(tmpvar_4, tmpvar_5, vec2(clamp(tmpvar_9, 0.0, 1.0))), mix(tmpvar_6, tmpvar_7, vec2(clamp(
+					(tmpvar_9 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_9 - 1.0), 0.0, 1.0)));
+				vec4 tmpvar_10;
+				tmpvar_10.w = 1.0;
+				tmpvar_10.xyz = xlv_TEXCOORD4;
+				float tmpvar_11;
+				tmpvar_11 = texture2D (_LightTexture0, (_LightMatrix0 * tmpvar_10).xy).w;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
 				vec4 c_12;
 				vec3 tmpvar_13;
 				tmpvar_13 = normalize(worldN_1);
+				float tmpvar_14;
+				tmpvar_14 = (pow(max(0.0,
+					dot(tmpvar_13, normalize((_WorldSpaceLightPos0.xyz + normalize(
+					(_WorldSpaceCameraPos - xlv_TEXCOORD4)
+					))))
+				), (_Shininess * 128.0)) * ((
+					pow(((1.0 - tmpvar_8.y) + 0.4), 3.0)
+					+ 0.2) * tmpvar_8.y));
 				c_12.xyz = ((_LightColor0.xyz * (
-					(mix(tmpvar_9.xxx, mix(mix(vec3(
-						clamp((tmpvar_9.x + ((1.0 - tmpvar_9.y) * (tmpvar_9.x * tmpvar_9.x))), 0.0, 1.0)
-						), xlv_COLOR0.xyz, tmpvar_9.yyy), xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * max(0.0, dot(tmpvar_13, _WorldSpaceLightPos0.xyz)))
+					((mix(tmpvar_8.xxx, mix(
+						mix(vec3(clamp((tmpvar_8.x + (
+						(1.0 - tmpvar_8.y)
+							*
+							(tmpvar_8.x * tmpvar_8.x)
+							)), 0.0, 1.0)), xlv_COLOR0.xyz, tmpvar_8.yyy)
+						, xlv_COLOR0.xyz, xlv_TEXCOORD0.www), vec3(clamp(xlv_COLOR0.w, 0.0, 1.0))) * _BurnColor.xyz) * max(0.0, dot(tmpvar_13, _WorldSpaceLightPos0.xyz)))
 					+
-					(pow(max(0.0, dot(tmpvar_13,
-						normalize((normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4)) + _WorldSpaceLightPos0.xyz))
-						)), (_Shininess * 128.0)) * ((pow(
-							((1.0 - tmpvar_9.y) + 0.4)
-							, 3.0) + 0.2) * tmpvar_9.y))
-					)) * texture2D (_LightTexture0, (_LightMatrix0 * tmpvar_11).xy).w);
-				c_12.w = 1.0;
-				c_2.xyz = c_12.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
+					(tmpvar_14 * _SpecColor.xyz)
+					)) * tmpvar_11);
+				c_12.w = (_Opacity + ((_LightColor0.w * _SpecColor.w) * (tmpvar_14 * tmpvar_11)));
+				gl_FragData[0] = c_12;
 			}
 
 
@@ -13513,9 +14034,9 @@ Shader "KSP/Specular Layered" {
 				Bind "texcoord" TexCoord0
 				Bind "texcoord1" TexCoord1
 				Bind "tangent" TexCoord4
-				ConstBuffer "$Globals" 272
-				Vector 240[_MainTex_ST]
-				Vector 256[_Emissive_ST]
+				ConstBuffer "$Globals" 304
+				Vector 272[_MainTex_ST]
+				Vector 288[_Emissive_ST]
 				ConstBuffer "UnityPerDraw" 352
 				Matrix 0[glstate_matrix_mvp]
 				Matrix 192[_Object2World]
@@ -13525,7 +14046,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityPerDraw" 1
 				"vs_4_0
 				root12:aaacaaaa
-				eefiecedhaomgnoeigpocikojcffdbiamlplojojabaaaaaaaeaiaaaaadaaaaaa
+				eefiecedgdmnpmfdjmlgkfdjcbocadegflimgmfgabaaaaaaaeaiaaaaadaaaaaa
 				cmaaaaaaceabaaaapiabaaaaejfdeheopaaaaaaaaiaaaaaaaiaaaaaamiaaaaaa
 				aaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaapapaaaanbaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaanjaaaaaaaaaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -13541,7 +14062,7 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaaeaaaaaaahaiaaaalmaaaaaaaeaaaaaaaaaaaaaaadaaaaaaafaaaaaa
 				ahaiaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaaapaaaaaafdfgfpfa
 				epfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaaklfdeieefcaeagaaaa
-				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaa
+				eaaaabaaibabaaaafjaaaaaeegiocaaaaaaaaaaabdaaaaaafjaaaaaeegiocaaa
 				abaaaaaabgaaaaaafpaaaaadpcbabaaaaaaaaaaafpaaaaadpcbabaaaabaaaaaa
 				fpaaaaadhcbabaaaacaaaaaafpaaaaaddcbabaaaadaaaaaafpaaaaaddcbabaaa
 				aeaaaaaafpaaaaadpcbabaaaahaaaaaaghaaaaaepccabaaaaaaaaaaaabaaaaaa
@@ -13553,8 +14074,8 @@ Shader "KSP/Specular Layered" {
 				aaaaaaaaegiocaaaabaaaaaaacaaaaaakgbkbaaaaaaaaaaaegaobaaaaaaaaaaa
 				dcaaaaakpccabaaaaaaaaaaaegiocaaaabaaaaaaadaaaaaapgbpbaaaaaaaaaaa
 				egaobaaaaaaaaaaadcaaaaaldccabaaaabaaaaaaegbabaaaadaaaaaaegiacaaa
-				aaaaaaaaapaaaaaaogikcaaaaaaaaaaaapaaaaaadcaaaaalmccabaaaabaaaaaa
-				agbebaaaaeaaaaaaagiecaaaaaaaaaaabaaaaaaakgiocaaaaaaaaaaabaaaaaaa
+				aaaaaaaabbaaaaaaogikcaaaaaaaaaaabbaaaaaadcaaaaalmccabaaaabaaaaaa
+				agbebaaaaeaaaaaaagiecaaaaaaaaaaabcaaaaaakgiocaaaaaaaaaaabcaaaaaa
 				diaaaaaiccaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabaaaaaaa
 				diaaaaaiecaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabbaaaaaa
 				diaaaaaibcaabaaaaaaaaaaaakbabaaaacaaaaaaakiacaaaabaaaaaabcaaaaaa
@@ -13592,7 +14113,7 @@ Shader "KSP/Specular Layered" {
 				doaaaaab"
 		}
 		SubProgram "gles " {
-			// Stats: 43 math, 3 textures
+			// Stats: 47 math, 3 textures
 			Keywords{ "DIRECTIONAL_COOKIE" }
 				"!!GLES
 				#version 100
@@ -13685,11 +14206,14 @@ Shader "KSP/Specular Layered" {
 			uniform highp vec3 _WorldSpaceCameraPos;
 			uniform mediump vec4 _WorldSpaceLightPos0;
 			uniform lowp vec4 _LightColor0;
+			uniform lowp vec4 _SpecColor;
 			uniform sampler2D _LightTexture0;
 			uniform mediump mat4 _LightMatrix0;
 			uniform mediump float _Shininess;
 			uniform sampler2D _MainTex;
 			uniform sampler2D _Emissive;
+			uniform highp float _Opacity;
+			uniform highp vec4 _BurnColor;
 			varying highp vec4 xlv_TEXCOORD0;
 			varying lowp vec3 xlv_TEXCOORD1;
 			varying lowp vec3 xlv_TEXCOORD2;
@@ -13699,80 +14223,94 @@ Shader "KSP/Specular Layered" {
 			void main()
 			{
 				lowp vec3 worldN_1;
-				lowp vec4 c_2;
-				lowp vec3 worldViewDir_3;
-				lowp vec3 lightDir_4;
-				highp vec4 tmpvar_5;
-				mediump vec3 tmpvar_6;
-				tmpvar_6 = _WorldSpaceLightPos0.xyz;
-				lightDir_4 = tmpvar_6;
-				highp vec3 tmpvar_7;
-				tmpvar_7 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
-				worldViewDir_3 = tmpvar_7;
-				lowp vec3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = xlv_COLOR0;
-				lowp vec3 tmpvar_9;
-				lowp float tmpvar_10;
-				highp vec4 mask_11;
-				highp vec4 color_12;
+				lowp vec3 worldViewDir_2;
+				lowp vec3 lightDir_3;
+				highp vec4 tmpvar_4;
+				mediump vec3 tmpvar_5;
+				tmpvar_5 = _WorldSpaceLightPos0.xyz;
+				lightDir_3 = tmpvar_5;
+				highp vec3 tmpvar_6;
+				tmpvar_6 = normalize((_WorldSpaceCameraPos - xlv_TEXCOORD4));
+				worldViewDir_2 = tmpvar_6;
+				tmpvar_4 = xlv_COLOR0;
+				lowp vec3 tmpvar_7;
+				lowp float tmpvar_8;
+				lowp float tmpvar_9;
+				highp vec4 mask_10;
+				highp vec4 color_11;
+				lowp vec4 tmpvar_12;
+				tmpvar_12 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
+				color_11 = tmpvar_12;
 				lowp vec4 tmpvar_13;
-				tmpvar_13 = texture2D (_MainTex, xlv_TEXCOORD0.xy);
-				color_12 = tmpvar_13;
-				lowp vec4 tmpvar_14;
-				tmpvar_14 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
-				mask_11 = tmpvar_14;
+				tmpvar_13 = texture2D (_Emissive, xlv_TEXCOORD0.xy);
+				mask_10 = tmpvar_13;
+				highp vec2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
 				highp vec2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
 				highp vec2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
 				highp vec2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
 				highp vec2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				highp vec2 tmpvar_19;
-				highp float tmpvar_20;
-				tmpvar_20 = (xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, vec2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, vec2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), vec2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				highp vec3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(vec3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = tmpvar_21;
-				highp float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = ((tmpvar_22 + 0.2) * tmpvar_19.y);
-				highp vec4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = xlv_TEXCOORD4;
-				highp vec2 tmpvar_24;
-				tmpvar_24 = (_LightMatrix0 * tmpvar_23).xy;
+				highp float tmpvar_19;
+				tmpvar_19 = (xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, vec2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, vec2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), vec2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				highp vec3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(vec3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+				), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, xlv_TEXCOORD0.www), vec3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = (tmpvar_20 * _BurnColor.xyz);
+				highp float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = ((tmpvar_21 + 0.2) * tmpvar_18.y);
+				tmpvar_9 = _Opacity;
+				highp vec4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = xlv_TEXCOORD4;
+				highp vec2 tmpvar_23;
+				tmpvar_23 = (_LightMatrix0 * tmpvar_22).xy;
+				lowp float tmpvar_24;
+				tmpvar_24 = texture2D (_LightTexture0, tmpvar_23).w;
 				worldN_1.x = xlv_TEXCOORD1.z;
 				worldN_1.y = xlv_TEXCOORD2.z;
 				worldN_1.z = xlv_TEXCOORD3.z;
-				lowp vec4 c_25;
-				lowp float spec_26;
-				lowp vec3 tmpvar_27;
-				tmpvar_27 = normalize(worldN_1);
-				lowp float tmpvar_28;
-				tmpvar_28 = max(0.0, dot(tmpvar_27, tmpvar_8));
-				mediump float tmpvar_29;
-				tmpvar_29 = (pow(tmpvar_28, (_Shininess * 128.0)) * tmpvar_10);
-				spec_26 = tmpvar_29;
-				c_25.xyz = ((_LightColor0.xyz * (
-					(tmpvar_9 * max(0.0, dot(tmpvar_27, lightDir_4)))
-					+ spec_26)) * texture2D (_LightTexture0, tmpvar_24).w);
-				c_25.w = 1.0;
-				c_2.xyz = c_25.xyz;
-				c_2.w = 1.0;
-				gl_FragData[0] = c_2;
+				mediump vec3 lightDir_25;
+				lightDir_25 = lightDir_3;
+				mediump vec3 viewDir_26;
+				viewDir_26 = worldViewDir_2;
+				mediump float atn_27;
+				atn_27 = tmpvar_24;
+				lowp vec4 c_28;
+				lowp float spec_29;
+				lowp float diff_30;
+				lowp vec3 halfDir_31;
+				lowp vec3 tmpvar_32;
+				tmpvar_32 = normalize(worldN_1);
+				mediump vec3 tmpvar_33;
+				tmpvar_33 = normalize((lightDir_25 + viewDir_26));
+				halfDir_31 = tmpvar_33;
+				mediump float tmpvar_34;
+				tmpvar_34 = max(0.0, dot(tmpvar_32, lightDir_25));
+				diff_30 = tmpvar_34;
+				lowp float tmpvar_35;
+				tmpvar_35 = max(0.0, dot(tmpvar_32, halfDir_31));
+				mediump float tmpvar_36;
+				tmpvar_36 = (pow(tmpvar_35, (_Shininess * 128.0)) * tmpvar_8);
+				spec_29 = tmpvar_36;
+				c_28.xyz = ((_LightColor0.xyz * (
+					(tmpvar_7 * diff_30)
+					+
+					(spec_29 * _SpecColor.xyz)
+					)) * atn_27);
+				c_28.w = (tmpvar_9 + ((_LightColor0.w * _SpecColor.w) * (spec_29 * atn_27)));
+				gl_FragData[0] = c_28;
 			}
 
 
@@ -13868,6 +14406,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in highp vec4 in_POSITION0;
@@ -14023,6 +14563,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform lowp sampler2D _MainTex;
@@ -14038,15 +14580,17 @@ Shader "KSP/Specular Layered" {
 			highp vec2 t0;
 			lowp float t10_0;
 			highp vec4 t1;
+			mediump vec4 t16_1;
 			highp vec4 t2;
 			lowp vec4 t10_3;
 			lowp vec3 t10_4;
-			lowp vec3 t10_5;
-			mediump vec2 t16_6;
+			mediump vec3 t16_5;
+			mediump float t16_6;
 			highp vec3 t7;
-			mediump float t16_13;
+			mediump vec3 t16_12;
 			highp vec2 t14;
 			mediump float t16_14;
+			mediump float t16_19;
 			highp float t22;
 			lowp float t10_25;
 			void main()
@@ -14078,39 +14622,45 @@ Shader "KSP/Specular Layered" {
 				t16_14 = vs_COLOR0.w;
 				t16_14 = clamp(t16_14, 0.0, 1.0);
 				t7.xyz = vec3(t16_14) * t1.xzw + t0.yyy;
+				t7.xyz = t7.xyz * _BurnColor.xyz;
+				t10_4.x = vs_TEXCOORD1.z;
+				t10_4.y = vs_TEXCOORD2.z;
+				t10_4.z = vs_TEXCOORD3.z;
+				t10_25 = dot(t10_4.xyz, t10_4.xyz);
+				t10_25 = inversesqrt(t10_25);
+				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
+				t16_5.x = dot(t10_4.xyz, _WorldSpaceLightPos0.xyz);
+				t16_5.x = max(t16_5.x, 0.0);
 				t1.x = t1.y * t1.y;
 				t1.x = t1.y * t1.x + 0.200000003;
 				t0.x = t0.x * t1.x;
 				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
 				t22 = dot(t1.xyz, t1.xyz);
 				t22 = inversesqrt(t22);
-				t10_4.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
-				t10_25 = dot(t10_4.xyz, t10_4.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_4.xyz = vec3(t10_25) * t10_4.xyz;
-				t10_5.x = vs_TEXCOORD1.z;
-				t10_5.y = vs_TEXCOORD2.z;
-				t10_5.z = vs_TEXCOORD3.z;
-				t10_25 = dot(t10_5.xyz, t10_5.xyz);
-				t10_25 = inversesqrt(t10_25);
-				t10_5.xyz = vec3(t10_25) * t10_5.xyz;
-				t10_4.x = dot(t10_5.xyz, t10_4.xyz);
-				t10_4.y = dot(t10_5.xyz, _WorldSpaceLightPos0.xyz);
-				t10_4.xy = max(t10_4.xy, vec2(0.0, 0.0));
-				t16_6.x = log2(t10_4.x);
-				t16_13 = _Shininess * 128.0;
-				t16_6.x = t16_6.x * t16_13;
-				t16_6.x = exp2(t16_6.x);
-				t16_6.x = t0.x * t16_6.x;
-				t10_4.xyz = t7.xyz * t10_4.yyy + t16_6.xxx;
+				t16_12.xyz = t1.xyz * vec3(t22) + _WorldSpaceLightPos0.xyz;
+				t16_6 = dot(t16_12.xyz, t16_12.xyz);
+				t16_6 = inversesqrt(t16_6);
+				t16_12.xyz = t16_12.xyz * vec3(t16_6);
+				t10_4.x = dot(t10_4.xyz, t16_12.xyz);
+				t10_4.x = max(t10_4.x, 0.0);
+				t16_12.x = log2(t10_4.x);
+				t16_19 = _Shininess * 128.0;
+				t16_12.x = t16_12.x * t16_19;
+				t16_12.x = exp2(t16_12.x);
+				t16_12.x = t0.x * t16_12.x;
+				t10_4.xyz = t16_12.xxx * _SpecColor.xyz;
+				t10_4.xyz = t7.xyz * t16_5.xxx + t10_4.xyz;
 				t10_4.xyz = t10_4.xyz * _LightColor0.xyz;
-				t16_6.xy = vs_TEXCOORD4.yy * _LightMatrix0[1].xy;
-				t16_6.xy = _LightMatrix0[0].xy * vs_TEXCOORD4.xx + t16_6.xy;
-				t16_6.xy = _LightMatrix0[2].xy * vs_TEXCOORD4.zz + t16_6.xy;
-				t16_6.xy = t16_6.xy + _LightMatrix0[3].xy;
-				t10_0 = texture(_LightTexture0, t16_6.xy).w;
-				SV_Target0.xyz = vec3(t10_0) * t10_4.xyz;
-				SV_Target0.w = 1.0;
+				t16_5.xz = vs_TEXCOORD4.yy * _LightMatrix0[1].xy;
+				t16_5.xz = _LightMatrix0[0].xy * vs_TEXCOORD4.xx + t16_5.xz;
+				t16_5.xz = _LightMatrix0[2].xy * vs_TEXCOORD4.zz + t16_5.xz;
+				t16_5.xz = t16_5.xz + _LightMatrix0[3].xy;
+				t10_0 = texture(_LightTexture0, t16_5.xz).w;
+				t16_1.xyz = vec3(t10_0) * t10_4.xyz;
+				t10_4.x = _LightColor0.w * _SpecColor.w;
+				t10_4.x = t16_12.x * t10_4.x;
+				t16_1.w = t10_4.x * t10_0 + _Opacity;
+				SV_Target0 = t16_1;
 				return;
 			}
 
@@ -14318,6 +14868,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			in  vec4 in_POSITION0;
@@ -14472,6 +15024,8 @@ Shader "KSP/Specular Layered" {
 			uniform 	float _Opacity;
 			uniform 	float _RimFalloff;
 			uniform 	vec4 _RimColor;
+			uniform 	vec4 _TemperatureColor;
+			uniform 	vec4 _BurnColor;
 			uniform 	vec4 _MainTex_ST;
 			uniform 	vec4 _Emissive_ST;
 			uniform  sampler2D _MainTex;
@@ -14484,15 +15038,15 @@ Shader "KSP/Specular Layered" {
 			in  vec3 vs_TEXCOORD4;
 			in  vec4 vs_COLOR0;
 			out vec4 SV_Target0;
-			vec3 t0;
+			vec2 t0;
 			vec4 t1;
 			lowp vec4 t10_1;
 			vec4 t2;
 			lowp vec4 t10_3;
 			vec3 t4;
+			float t5;
+			vec3 t6;
 			vec2 t8;
-			float t9;
-			float t13;
 			void main()
 			{
 				t0.x = vs_TEXCOORD0.z * 3.0;
@@ -14522,39 +15076,44 @@ Shader "KSP/Specular Layered" {
 				t8.x = vs_COLOR0.w;
 				t8.x = clamp(t8.x, 0.0, 1.0);
 				t4.xyz = t8.xxx * t1.xzw + t0.yyy;
-				t1.x = t1.y * t1.y;
-				t1.x = t1.y * t1.x + 0.200000003;
-				t0.x = t0.x * t1.x;
-				t1.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = t1.xyz * vec3(t13) + _WorldSpaceLightPos0.xyz;
-				t13 = dot(t1.xyz, t1.xyz);
-				t13 = inversesqrt(t13);
-				t1.xyz = vec3(t13) * t1.xyz;
+				t4.xyz = t4.xyz * _BurnColor.xyz;
 				t2.x = vs_TEXCOORD1.z;
 				t2.y = vs_TEXCOORD2.z;
 				t2.z = vs_TEXCOORD3.z;
-				t13 = dot(t2.xyz, t2.xyz);
-				t13 = inversesqrt(t13);
-				t2.xyz = vec3(t13) * t2.xyz;
-				t1.x = dot(t2.xyz, t1.xyz);
-				t1.y = dot(t2.xyz, _WorldSpaceLightPos0.xyz);
-				t1.xy = max(t1.xy, vec2(0.0, 0.0));
+				t1.x = dot(t2.xyz, t2.xyz);
+				t1.x = inversesqrt(t1.x);
+				t1.xzw = t1.xxx * t2.xyz;
+				t2.x = dot(t1.xzw, _WorldSpaceLightPos0.xyz);
+				t2.x = max(t2.x, 0.0);
+				t6.x = t1.y * t1.y;
+				t5 = t1.y * t6.x + 0.200000003;
+				t0.x = t0.x * t5;
+				t6.xyz = (-vs_TEXCOORD4.xyz) + _WorldSpaceCameraPos.xyzx.xyz;
+				t5 = dot(t6.xyz, t6.xyz);
+				t5 = inversesqrt(t5);
+				t6.xyz = t6.xyz * vec3(t5) + _WorldSpaceLightPos0.xyz;
+				t5 = dot(t6.xyz, t6.xyz);
+				t5 = inversesqrt(t5);
+				t6.xyz = vec3(t5) * t6.xyz;
+				t1.x = dot(t1.xzw, t6.xyz);
+				t1.x = max(t1.x, 0.0);
 				t1.x = log2(t1.x);
-				t9 = _Shininess * 128.0;
-				t1.x = t1.x * t9;
+				t5 = _Shininess * 128.0;
+				t1.x = t1.x * t5;
 				t1.x = exp2(t1.x);
 				t0.x = t0.x * t1.x;
-				t0.xyz = t4.xyz * t1.yyy + t0.xxx;
-				t0.xyz = t0.xyz * _LightColor0.xyz;
+				t1.xyz = t0.xxx * _SpecColor.xyz;
+				t4.xyz = t4.xyz * t2.xxx + t1.xyz;
+				t4.xyz = t4.xyz * _LightColor0.xyz;
 				t1.xy = vs_TEXCOORD4.yy * _LightMatrix0[1].xy;
 				t1.xy = _LightMatrix0[0].xy * vs_TEXCOORD4.xx + t1.xy;
 				t1.xy = _LightMatrix0[2].xy * vs_TEXCOORD4.zz + t1.xy;
 				t1.xy = t1.xy + _LightMatrix0[3].xy;
 				t10_1 = texture(_LightTexture0, t1.xy);
-				SV_Target0.xyz = t0.xyz * t10_1.www;
-				SV_Target0.w = 1.0;
+				SV_Target0.xyz = t4.xyz * t10_1.www;
+				t4.x = _LightColor0.w * _SpecColor.w;
+				t0.x = t0.x * t4.x;
+				SV_Target0.w = t0.x * t10_1.w + _Opacity;
 				return;
 			}
 
@@ -14568,19 +15127,22 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 61 math, 3 textures
+			// Stats: 66 math, 3 textures
 			Keywords{ "POINT" }
 				Matrix 0[_LightMatrix0] 3
+				Vector 9[_BurnColor]
 				Vector 5[_LightColor0]
-				Float 6[_Shininess]
+				Float 8[_Opacity]
+				Float 7[_Shininess]
+				Vector 6[_SpecColor]
 				Vector 3[_WorldSpaceCameraPos]
 				Vector 4[_WorldSpaceLightPos0]
 				SetTexture 0[_LightTexture0] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
 				"ps_3_0
-				def c7, 3, -2, -1, -1.39999998
-				def c8, 0.200000003, 1, 0, 128
+				def c10, 3, -2, -1, -1.39999998
+				def c11, 0.200000003, 1, 0, 128
 				dcl_texcoord v0
 				dcl_texcoord1_pp v1.z
 				dcl_texcoord2_pp v2.z
@@ -14590,7 +15152,7 @@ Shader "KSP/Specular Layered" {
 				dcl_2d s0
 				dcl_2d s1
 				dcl_2d s2
-				mul r0.x, c7.x, v0.z
+				mul r0.x, c10.x, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s1
 				mov r2.xz, r1
@@ -14598,62 +15160,70 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c7.x, c7.yzzw
+				mad_sat r0.xy, v0.z, c10.x, c10.yzzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, -c7.xzww
+				add r0.yz, -r1.x, -c10.xzww
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v5, r0.x
 				add r0.xyw, -r2.xyzz, v5.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v5.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c8.x
-				mul_pp r0.x, r1.x, r0.x
-				add r0.yzw, c3.xxyz, -v4.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
-				rsq r1.x, r1.x
-				add r1.yzw, c4.xxyz, -v4.xxyz
-				nrm_pp r3.xyz, r1.yzww
-				mad_pp r0.yzw, r0, r1.x, r3.xxyz
-				nrm_pp r1.xyz, r0.yzww
-				mov_pp r4.x, v1.z
-				mov_pp r4.y, v2.z
-				mov_pp r4.z, v3.z
-				nrm_pp r5.xyz, r4
-				dp3_pp r0.y, r5, r1
-				dp3_pp r0.z, r5, r3
-				max_pp r1.x, r0.z, c8.z
-				max_pp r1.y, r0.y, c8.z
-				mov r0.w, c8.w
-				mul_pp r0.y, r0.w, c6.x
-				pow_pp r2.w, r1.y, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.x, r0.x
-				mul_pp r0.xyz, r0, c5
-				mad r1, v4.xyzx, c8.yyyz, c8.zzzy
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c9.xyzz
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c11.x
+				mul_pp r0.z, r1.x, r0.z
+				add r1.xyz, c3, -v4
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				add r2.xyz, c4, -v4
+				nrm_pp r3.xyz, r2
+				mad_pp r1.xyz, r1, r1.w, r3
+				nrm_pp r2.xyz, r1
+				mov_pp r1.x, v1.z
+				mov_pp r1.y, v2.z
+				mov_pp r1.z, v3.z
+				nrm_pp r4.xyz, r1
+				dp3_pp r1.x, r4, r2
+				dp3_pp r1.y, r4, r3
+				max_pp r2.x, r1.y, c11.z
+				max_pp r2.y, r1.x, c11.z
+				mov r1.w, c11.w
+				mul_pp r1.x, r1.w, c7.x
+				pow_pp r3.x, r2.y, r1.x
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r1.xyz, r0.z, c6
+				mad_pp r0.xyw, r0, r2.x, r1.xyzz
+				mul_pp r0.xyw, r0, c5.xyzz
+				mad r1, v4.xyzx, c11.yyyz, c11.zzzy
 				dp4 r2.x, c0, r1
 				dp4 r2.y, c1, r1
 				dp4 r2.z, c2, r1
-				dp3 r0.w, r2, r2
-				texld_pp r1, r0.w, s0
-				mul_pp oC0.xyz, r0, r1.x
-				mov_pp oC0.w, -c7.z
+				dp3 r1.x, r2, r2
+				texld_pp r1, r1.x, s0
+				mul_pp oC0.xyz, r0.xyww, r1.x
+				mov r0.w, c5.w
+				mul_pp r0.x, r0.w, c6.w
+				mul_pp r0.x, r0.z, r0.x
+				mad_pp oC0.w, r0.x, r1.x, c8.x
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 49 math, 3 textures
+			// Stats: 54 math, 3 textures
 			Keywords{ "POINT" }
 				SetTexture 0[_MainTex] 2D 1
 				SetTexture 1[_Emissive] 2D 2
 				SetTexture 2[_LightTexture0] 2D 0
-				ConstBuffer "$Globals" 272
+				ConstBuffer "$Globals" 304
 				Matrix 144[_LightMatrix0]
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 208[_Shininess]
+				Float 212[_Opacity]
+				Vector 256[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -14663,7 +15233,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:adadadaa
-				eefiecedddoclnajpoeaoigaaijodgikbmmmbgjnabaaaaaaemajaaaaadaaaaaa
+				eefiecedjchompgbhpegagoomlgebdiknaljelecabaaaaaaoaajaaaaadaaaaaa
 				cmaaaaaaaaabaaaadeabaaaaejfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -14672,8 +15242,8 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaafaaaaaaahahaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaa
 				apapaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaakl
 				epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcbaaiaaaaeaaaaaaa
-				aeacaaaafjaaaaaeegiocaaaaaaaaaaaaoaaaaaafjaaaaaeegiocaaaabaaaaaa
+				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefckeaiaaaaeaaaaaaa
+				cjacaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaaabaaaaaa
 				afaaaaaafjaaaaaeegiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaa
 				fkaaaaadaagabaaaabaaaaaafkaaaaadaagabaaaacaaaaaafibiaaaeaahabaaa
 				aaaaaaaaffffaaaafibiaaaeaahabaaaabaaaaaaffffaaaafibiaaaeaahabaaa
@@ -14703,7 +15273,8 @@ Shader "KSP/Specular Layered" {
 				abaaaaaaagajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaa
 				fgafbaiaebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaa
 				dkbabaaaagaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaa
-				abaaaaaafgafbaaaaaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaa
+				abaaaaaafgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaa
+				agijcaaaaaaaaaaabaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaa
 				bkaabaaaabaaaaaadcaaaaajbcaabaaaabaaaaaabkaabaaaabaaaaaaakaabaaa
 				abaaaaaaabeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaa
 				akaabaaaabaaaaaaaaaaaaajhcaabaaaabaaaaaaegbcbaiaebaaaaaaafaaaaaa
@@ -14727,17 +15298,21 @@ Shader "KSP/Specular Layered" {
 				abaaaaaaakiacaaaaaaaaaaaanaaaaaaabeaaaaaaaaaaaeddiaaaaahccaabaaa
 				abaaaaaabkaabaaaabaaaaaackaabaaaabaaaaaabjaaaaafccaabaaaabaaaaaa
 				bkaabaaaabaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaabkaabaaa
-				abaaaaaadcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaaagaabaaaabaaaaaa
-				agaabaaaaaaaaaaadiaaaaaihcaabaaaaaaaaaaaegacbaaaaaaaaaaaegiccaaa
+				abaaaaaadiaaaaaiocaabaaaabaaaaaaagaabaaaaaaaaaaaagijcaaaaaaaaaaa
+				ahaaaaaadcaaaaajocaabaaaaaaaaaaafgaobaaaaaaaaaaaagaabaaaabaaaaaa
+				fgaobaaaabaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaa
 				aaaaaaaaagaaaaaadiaaaaaihcaabaaaabaaaaaafgbfbaaaafaaaaaaegiccaaa
 				aaaaaaaaakaaaaaadcaaaaakhcaabaaaabaaaaaaegiccaaaaaaaaaaaajaaaaaa
 				agbabaaaafaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaabaaaaaaegiccaaa
 				aaaaaaaaalaaaaaakgbkbaaaafaaaaaaegacbaaaabaaaaaaaaaaaaaihcaabaaa
-				abaaaaaaegacbaaaabaaaaaaegiccaaaaaaaaaaaamaaaaaabaaaaaahicaabaaa
-				aaaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaabaaaaaa
-				pgapbaaaaaaaaaaaeghobaaaacaaaaaaaagabaaaaaaaaaaadiaaaaahhccabaaa
-				aaaaaaaaegacbaaaaaaaaaaaagaabaaaabaaaaaadgaaaaaficcabaaaaaaaaaaa
-				abeaaaaaaaaaiadpdoaaaaab"
+				abaaaaaaegacbaaaabaaaaaaegiccaaaaaaaaaaaamaaaaaabaaaaaahbcaabaaa
+				abaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaabaaaaaa
+				agaabaaaabaaaaaaeghobaaaacaaaaaaaagabaaaaaaaaaaadiaaaaahhccabaaa
+				aaaaaaaajgahbaaaaaaaaaaaagaabaaaabaaaaaadiaaaaajccaabaaaaaaaaaaa
+				dkiacaaaaaaaaaaaagaaaaaadkiacaaaaaaaaaaaahaaaaaadiaaaaahbcaabaaa
+				aaaaaaaaakaabaaaaaaaaaaabkaabaaaaaaaaaaadcaaaaakiccabaaaaaaaaaaa
+				akaabaaaaaaaaaaaakaabaaaabaaaaaabkiacaaaaaaaaaaaanaaaaaadoaaaaab
+				"
 		}
 		SubProgram "gles " {
 			Keywords{ "POINT" }
@@ -14748,17 +15323,20 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 46 math, 3 textures
+			// Stats: 50 math, 3 textures
 			Keywords{ "POINT" }
 				SetTexture 0[_LightTexture0] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
-				ConstBuffer "$Globals" 74
-				MatrixHalf 40[_LightMatrix0]
+				ConstBuffer "$Globals" 112
+				MatrixHalf 48[_LightMatrix0]
 				Vector 0[_WorldSpaceCameraPos] 3
 				Vector 16[_WorldSpaceLightPos0]
 				VectorHalf 32[_LightColor0] 4
-				ScalarHalf 72[_Shininess]
+				VectorHalf 40[_SpecColor] 4
+				ScalarHalf 80[_Shininess]
+				Float 84[_Opacity]
+				Vector 96[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -14777,8 +15355,11 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				float4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half4x4 _LightMatrix0;
 				half _Shininess;
+				float _Opacity;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _LightTexture0[[texture(0)]], sampler _mtlsmp__LightTexture0[[sampler(0)]]
@@ -14787,82 +15368,96 @@ Shader "KSP/Specular Layered" {
 			{
 				xlatMtlShaderOutput _mtl_o;
 				half3 worldN_1;
-				half4 c_2;
-				half3 worldViewDir_3;
-				half3 lightDir_4;
-				float4 tmpvar_5;
+				half3 worldViewDir_2;
+				half3 lightDir_3;
+				float4 tmpvar_4;
+				float3 tmpvar_5;
+				tmpvar_5 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
+				lightDir_3 = half3(tmpvar_5);
 				float3 tmpvar_6;
-				tmpvar_6 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
-				lightDir_4 = half3(tmpvar_6);
-				float3 tmpvar_7;
-				tmpvar_7 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
-				worldViewDir_3 = half3(tmpvar_7);
-				half3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = float4(_mtl_i.xlv_COLOR0);
-				half3 tmpvar_9;
-				half tmpvar_10;
-				float4 mask_11;
-				float4 color_12;
+				tmpvar_6 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
+				worldViewDir_2 = half3(tmpvar_6);
+				tmpvar_4 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_7;
+				half tmpvar_8;
+				half tmpvar_9;
+				float4 mask_10;
+				float4 color_11;
+				half4 tmpvar_12;
+				tmpvar_12 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_11 = float4(tmpvar_12);
 				half4 tmpvar_13;
-				tmpvar_13 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_12 = float4(tmpvar_13);
-				half4 tmpvar_14;
-				tmpvar_14 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_11 = float4(tmpvar_14);
+				tmpvar_13 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_10 = float4(tmpvar_13);
+				float2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
 				float2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
 				float2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
 				float2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
 				float2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				float2 tmpvar_19;
-				float tmpvar_20;
-				tmpvar_20 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, float2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, float2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), float2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				float3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(float3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = half3(tmpvar_21);
-				float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = half(((tmpvar_22 + 0.2) * tmpvar_19.y));
-				float4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = _mtl_i.xlv_TEXCOORD4;
-				float3 tmpvar_24;
-				tmpvar_24 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_23)).xyz;
-				float tmpvar_25;
-				tmpvar_25 = dot(tmpvar_24, tmpvar_24);
+				float tmpvar_19;
+				tmpvar_19 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, float2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, float2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), float2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				float3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(float3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+					), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = half3((tmpvar_20 * _mtl_u._BurnColor.xyz));
+				float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = half(((tmpvar_21 + 0.2) * tmpvar_18.y));
+				tmpvar_9 = half(_mtl_u._Opacity);
+				float4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = _mtl_i.xlv_TEXCOORD4;
+				float3 tmpvar_23;
+				tmpvar_23 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_22)).xyz;
+				float tmpvar_24;
+				tmpvar_24 = dot(tmpvar_23, tmpvar_23);
+				half tmpvar_25;
+				tmpvar_25 = _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(float2(tmpvar_24))).w;
 				worldN_1.x = _mtl_i.xlv_TEXCOORD1.z;
 				worldN_1.y = _mtl_i.xlv_TEXCOORD2.z;
 				worldN_1.z = _mtl_i.xlv_TEXCOORD3.z;
-				half4 c_26;
-				half spec_27;
-				half3 tmpvar_28;
-				tmpvar_28 = normalize(worldN_1);
-				half tmpvar_29;
-				tmpvar_29 = max((half)0.0, dot(tmpvar_28, tmpvar_8));
-				half tmpvar_30;
-				tmpvar_30 = (pow(tmpvar_29, (_mtl_u._Shininess * (half)128.0)) * tmpvar_10);
-				spec_27 = tmpvar_30;
-				c_26.xyz = ((_mtl_u._LightColor0.xyz * (
-					(tmpvar_9 * max((half)0.0, dot(tmpvar_28, lightDir_4)))
-					+ spec_27)) * _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(float2(tmpvar_25))).w);
-				c_26.w = half(1.0);
-				c_2.xyz = c_26.xyz;
-				c_2.w = half(1.0);
-				_mtl_o._glesFragData_0 = c_2;
+				half3 lightDir_26;
+				lightDir_26 = lightDir_3;
+				half3 viewDir_27;
+				viewDir_27 = worldViewDir_2;
+				half atn_28;
+				atn_28 = tmpvar_25;
+				half4 c_29;
+				half spec_30;
+				half diff_31;
+				half3 halfDir_32;
+				half3 tmpvar_33;
+				tmpvar_33 = normalize(worldN_1);
+				half3 tmpvar_34;
+				tmpvar_34 = normalize((lightDir_26 + viewDir_27));
+				halfDir_32 = tmpvar_34;
+				half tmpvar_35;
+				tmpvar_35 = max((half)0.0, dot(tmpvar_33, lightDir_26));
+				diff_31 = tmpvar_35;
+				half tmpvar_36;
+				tmpvar_36 = max((half)0.0, dot(tmpvar_33, halfDir_32));
+				half tmpvar_37;
+				tmpvar_37 = (pow(tmpvar_36, (_mtl_u._Shininess * (half)128.0)) * tmpvar_8);
+				spec_30 = tmpvar_37;
+				c_29.xyz = ((_mtl_u._LightColor0.xyz * (
+					(tmpvar_7 * diff_31)
+					+
+					(spec_30 * _mtl_u._SpecColor.xyz)
+					)) * atn_28);
+				c_29.w = (tmpvar_9 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * (spec_30 * atn_28)));
+				_mtl_o._glesFragData_0 = c_29;
 				return _mtl_o;
 			}
 
@@ -14877,17 +15472,20 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 51 math, 2 textures
+			// Stats: 55 math, 2 textures
 			Keywords{ "DIRECTIONAL" }
+				Vector 6[_BurnColor]
 				Vector 2[_LightColor0]
-				Float 3[_Shininess]
+				Float 5[_Opacity]
+				Float 4[_Shininess]
+				Vector 3[_SpecColor]
 				Vector 0[_WorldSpaceCameraPos]
 				Vector 1[_WorldSpaceLightPos0]
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
 				"ps_3_0
-				def c4, 3, -2, -1, -1.39999998
-				def c5, 0.200000003, 0, 128, 0
+				def c7, 3, -2, -1, -1.39999998
+				def c8, 0.200000003, 0, 128, 0
 				dcl_texcoord v0
 				dcl_texcoord1_pp v1.z
 				dcl_texcoord2_pp v2.z
@@ -14896,7 +15494,7 @@ Shader "KSP/Specular Layered" {
 				dcl_color v5
 				dcl_2d s0
 				dcl_2d s1
-				mul r0.x, c4.x, v0.z
+				mul r0.x, c7.x, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s0
 				mov r2.xz, r1
@@ -14904,51 +15502,58 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c4.x, c4.yzzw
+				mad_sat r0.xy, v0.z, c7.x, c7.yzzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, -c4.xzww
+				add r0.yz, -r1.x, -c7.xzww
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v5, r0.x
 				add r0.xyw, -r2.xyzz, v5.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v5.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c5.x
-				mul_pp r0.x, r1.x, r0.x
-				add r0.yzw, c0.xxyz, -v4.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
-				rsq r1.x, r1.x
-				mad_pp r0.yzw, r0, r1.x, c1.xxyz
-				nrm_pp r1.xyz, r0.yzww
-				mov_pp r3.x, v1.z
-				mov_pp r3.y, v2.z
-				mov_pp r3.z, v3.z
-				nrm_pp r4.xyz, r3
-				dp3_pp r0.y, r4, r1
-				dp3_pp r0.z, r4, c1
-				max_pp r1.x, r0.z, c5.y
-				max_pp r1.y, r0.y, c5.y
-				mov r0.z, c5.z
-				mul_pp r0.y, r0.z, c3.x
-				pow_pp r2.w, r1.y, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.x, r0.x
-				mul_pp oC0.xyz, r0, c2
-				mov_pp oC0.w, -c4.z
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c6.xyzz
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c8.x
+				mul_pp r0.z, r1.x, r0.z
+				add r1.xyz, c0, -v4
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				mad_pp r1.xyz, r1, r1.w, c1
+				nrm_pp r2.xyz, r1
+				mov_pp r1.x, v1.z
+				mov_pp r1.y, v2.z
+				mov_pp r1.z, v3.z
+				nrm_pp r3.xyz, r1
+				dp3_pp r1.x, r3, r2
+				dp3_pp r1.y, r3, c1
+				max_pp r2.x, r1.y, c8.y
+				max_pp r2.y, r1.x, c8.y
+				mov r1.z, c8.z
+				mul_pp r1.x, r1.z, c4.x
+				pow_pp r3.x, r2.y, r1.x
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r1.xyz, r0.z, c3
+				mad_pp r0.xyw, r0, r2.x, r1.xyzz
+				mul_pp oC0.xyz, r0.xyww, c2
+				mov r0.w, c2.w
+				mul_pp r0.x, r0.w, c3.w
+				mad_pp oC0.w, r0.x, r0.z, c5.x
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 39 math, 2 textures
+			// Stats: 44 math, 2 textures
 			Keywords{ "DIRECTIONAL" }
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
-				ConstBuffer "$Globals" 208
+				ConstBuffer "$Globals" 240
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 144[_Shininess]
+				Float 148[_Opacity]
+				Vector 192[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -14958,7 +15563,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:acadacaa
-				eefiecedanadjlokfdhjkjpjglknkbbmfpoflmdnabaaaaaanmahaaaaadaaaaaa
+				eefiecedbgdafdpacmlocljdfjknclkmnflckfkbabaaaaaageaiaaaaadaaaaaa
 				cmaaaaaaaaabaaaadeabaaaaejfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -14967,8 +15572,8 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaafaaaaaaahahaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaa
 				apapaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaakl
 				epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefckaagaaaaeaaaaaaa
-				kiabaaaafjaaaaaeegiocaaaaaaaaaaaakaaaaaafjaaaaaeegiocaaaabaaaaaa
+				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcciahaaaaeaaaaaaa
+				mkabaaaafjaaaaaeegiocaaaaaaaaaaaanaaaaaafjaaaaaeegiocaaaabaaaaaa
 				afaaaaaafjaaaaaeegiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaa
 				fkaaaaadaagabaaaabaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaafibiaaae
 				aahabaaaabaaaaaaffffaaaagcbaaaadpcbabaaaabaaaaaagcbaaaadecbabaaa
@@ -14997,30 +15602,35 @@ Shader "KSP/Specular Layered" {
 				pgbpbaaaabaaaaaaagajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaa
 				abaaaaaafgafbaiaebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaa
 				aaaaaaaadkbabaaaagaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaa
-				agaobaaaabaaaaaafgafbaaaaaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaa
-				abaaaaaabkaabaaaabaaaaaadcaaaaajbcaabaaaabaaaaaabkaabaaaabaaaaaa
-				akaabaaaabaaaaaaabeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaa
-				aaaaaaaaakaabaaaabaaaaaaaaaaaaajhcaabaaaabaaaaaaegbcbaiaebaaaaaa
-				afaaaaaaegiccaaaabaaaaaaaeaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaa
-				abaaaaaaegacbaaaabaaaaaaeeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaa
-				dcaaaaakhcaabaaaabaaaaaaegacbaaaabaaaaaapgapbaaaabaaaaaaegiccaaa
-				acaaaaaaaaaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaaabaaaaaaegacbaaa
-				abaaaaaaeeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaadiaaaaahhcaabaaa
-				abaaaaaapgapbaaaabaaaaaaegacbaaaabaaaaaadgaaaaafbcaabaaaacaaaaaa
-				ckbabaaaacaaaaaadgaaaaafccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaaf
-				ecaabaaaacaaaaaackbabaaaaeaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaa
-				acaaaaaaegacbaaaacaaaaaaeeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaa
-				diaaaaahhcaabaaaacaaaaaapgapbaaaabaaaaaaegacbaaaacaaaaaabaaaaaah
-				bcaabaaaabaaaaaaegacbaaaacaaaaaaegacbaaaabaaaaaabaaaaaaiccaabaaa
-				abaaaaaaegacbaaaacaaaaaaegiccaaaacaaaaaaaaaaaaaadeaaaaakdcaabaaa
-				abaaaaaaegaabaaaabaaaaaaaceaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-				cpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiecaabaaaabaaaaaa
-				akiacaaaaaaaaaaaajaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaaabaaaaaa
-				akaabaaaabaaaaaackaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaaakaabaaa
-				abaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaaabaaaaaa
-				dcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaafgafbaaaabaaaaaaagaabaaa
-				aaaaaaaadiaaaaaihccabaaaaaaaaaaaegacbaaaaaaaaaaaegiccaaaaaaaaaaa
-				agaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaaaaaaiadpdoaaaaab"
+				agaobaaaabaaaaaafgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaa
+				aaaaaaaaagijcaaaaaaaaaaaamaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaa
+				acaaaaaadgaaaaafccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaafecaabaaa
+				acaaaaaackbabaaaaeaaaaaabaaaaaahbcaabaaaabaaaaaaegacbaaaacaaaaaa
+				egacbaaaacaaaaaaeeaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaah
+				ncaabaaaabaaaaaaagaabaaaabaaaaaaagajbaaaacaaaaaabaaaaaaibcaabaaa
+				acaaaaaaigadbaaaabaaaaaaegiccaaaacaaaaaaaaaaaaaadeaaaaahbcaabaaa
+				acaaaaaaakaabaaaacaaaaaaabeaaaaaaaaaaaaadiaaaaahccaabaaaacaaaaaa
+				bkaabaaaabaaaaaabkaabaaaabaaaaaadcaaaaajccaabaaaabaaaaaabkaabaaa
+				abaaaaaabkaabaaaacaaaaaaabeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaa
+				akaabaaaaaaaaaaabkaabaaaabaaaaaaaaaaaaajocaabaaaacaaaaaaagbjbaia
+				ebaaaaaaafaaaaaaagijcaaaabaaaaaaaeaaaaaabaaaaaahccaabaaaabaaaaaa
+				jgahbaaaacaaaaaajgahbaaaacaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaa
+				abaaaaaadcaaaaakocaabaaaacaaaaaafgaobaaaacaaaaaafgafbaaaabaaaaaa
+				agijcaaaacaaaaaaaaaaaaaabaaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaa
+				jgahbaaaacaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadiaaaaah
+				ocaabaaaacaaaaaafgafbaaaabaaaaaafgaobaaaacaaaaaabaaaaaahbcaabaaa
+				abaaaaaaigadbaaaabaaaaaajgahbaaaacaaaaaadeaaaaahbcaabaaaabaaaaaa
+				akaabaaaabaaaaaaabeaaaaaaaaaaaaacpaaaaafbcaabaaaabaaaaaaakaabaaa
+				abaaaaaadiaaaaaiccaabaaaabaaaaaaakiacaaaaaaaaaaaajaaaaaaabeaaaaa
+				aaaaaaeddiaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaabkaabaaaabaaaaaa
+				bjaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaahbcaabaaaaaaaaaaa
+				akaabaaaaaaaaaaaakaabaaaabaaaaaadiaaaaaihcaabaaaabaaaaaaagaabaaa
+				aaaaaaaaegiccaaaaaaaaaaaahaaaaaadcaaaaajocaabaaaaaaaaaaafgaobaaa
+				aaaaaaaaagaabaaaacaaaaaaagajbaaaabaaaaaadiaaaaaihccabaaaaaaaaaaa
+				jgahbaaaaaaaaaaaegiccaaaaaaaaaaaagaaaaaadiaaaaajccaabaaaaaaaaaaa
+				dkiacaaaaaaaaaaaagaaaaaadkiacaaaaaaaaaaaahaaaaaadcaaaaakiccabaaa
+				aaaaaaaabkaabaaaaaaaaaaaakaabaaaaaaaaaaabkiacaaaaaaaaaaaajaaaaaa
+				doaaaaab"
 		}
 		SubProgram "gles " {
 			Keywords{ "DIRECTIONAL" }
@@ -15031,15 +15641,18 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 40 math, 2 textures
+			// Stats: 43 math, 2 textures
 			Keywords{ "DIRECTIONAL" }
 				SetTexture 0[_MainTex] 2D 0
 				SetTexture 1[_Emissive] 2D 1
-				ConstBuffer "$Globals" 34
+				ConstBuffer "$Globals" 64
 				Vector 0[_WorldSpaceCameraPos] 3
 				VectorHalf 16[_WorldSpaceLightPos0] 4
 				VectorHalf 24[_LightColor0] 4
-				ScalarHalf 32[_Shininess]
+				VectorHalf 32[_SpecColor] 4
+				ScalarHalf 40[_Shininess]
+				Float 44[_Opacity]
+				Vector 48[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -15058,7 +15671,10 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				half4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half _Shininess;
+				float _Opacity;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _MainTex[[texture(0)]], sampler _mtlsmp__MainTex[[sampler(0)]]
@@ -15066,75 +15682,81 @@ Shader "KSP/Specular Layered" {
 			{
 				xlatMtlShaderOutput _mtl_o;
 				half3 worldN_1;
-				half4 c_2;
-				half3 worldViewDir_3;
-				half3 lightDir_4;
-				float4 tmpvar_5;
-				half3 tmpvar_6;
-				tmpvar_6 = _mtl_u._WorldSpaceLightPos0.xyz;
-				lightDir_4 = tmpvar_6;
-				float3 tmpvar_7;
-				tmpvar_7 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
-				worldViewDir_3 = half3(tmpvar_7);
-				half3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = float4(_mtl_i.xlv_COLOR0);
-				half3 tmpvar_9;
-				half tmpvar_10;
-				float4 mask_11;
-				float4 color_12;
+				half3 worldViewDir_2;
+				half3 lightDir_3;
+				float4 tmpvar_4;
+				half3 tmpvar_5;
+				tmpvar_5 = _mtl_u._WorldSpaceLightPos0.xyz;
+				lightDir_3 = tmpvar_5;
+				float3 tmpvar_6;
+				tmpvar_6 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
+				worldViewDir_2 = half3(tmpvar_6);
+				tmpvar_4 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_7;
+				half tmpvar_8;
+				half tmpvar_9;
+				float4 mask_10;
+				float4 color_11;
+				half4 tmpvar_12;
+				tmpvar_12 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_11 = float4(tmpvar_12);
 				half4 tmpvar_13;
-				tmpvar_13 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_12 = float4(tmpvar_13);
-				half4 tmpvar_14;
-				tmpvar_14 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_11 = float4(tmpvar_14);
+				tmpvar_13 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_10 = float4(tmpvar_13);
+				float2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
 				float2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
 				float2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
 				float2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
 				float2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				float2 tmpvar_19;
-				float tmpvar_20;
-				tmpvar_20 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, float2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, float2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), float2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				float3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(float3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = half3(tmpvar_21);
-				float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = half(((tmpvar_22 + 0.2) * tmpvar_19.y));
+				float tmpvar_19;
+				tmpvar_19 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, float2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, float2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), float2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				float3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(float3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+					), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = half3((tmpvar_20 * _mtl_u._BurnColor.xyz));
+				float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = half(((tmpvar_21 + 0.2) * tmpvar_18.y));
+				tmpvar_9 = half(_mtl_u._Opacity);
 				worldN_1.x = _mtl_i.xlv_TEXCOORD1.z;
 				worldN_1.y = _mtl_i.xlv_TEXCOORD2.z;
 				worldN_1.z = _mtl_i.xlv_TEXCOORD3.z;
-				half4 c_23;
-				half spec_24;
-				half3 tmpvar_25;
-				tmpvar_25 = normalize(worldN_1);
-				half tmpvar_26;
-				tmpvar_26 = max((half)0.0, dot(tmpvar_25, tmpvar_8));
-				half tmpvar_27;
-				tmpvar_27 = (pow(tmpvar_26, (_mtl_u._Shininess * (half)128.0)) * tmpvar_10);
-				spec_24 = tmpvar_27;
-				c_23.xyz = (_mtl_u._LightColor0.xyz * ((tmpvar_9 *
-					max((half)0.0, dot(tmpvar_25, lightDir_4))
-					) + spec_24));
-				c_23.w = half(1.0);
-				c_2.xyz = c_23.xyz;
-				c_2.w = half(1.0);
-				_mtl_o._glesFragData_0 = c_2;
+				half3 lightDir_22;
+				lightDir_22 = lightDir_3;
+				half3 viewDir_23;
+				viewDir_23 = worldViewDir_2;
+				half4 c_24;
+				half spec_25;
+				half diff_26;
+				half3 halfDir_27;
+				half3 tmpvar_28;
+				tmpvar_28 = normalize(worldN_1);
+				half3 tmpvar_29;
+				tmpvar_29 = normalize((lightDir_22 + viewDir_23));
+				halfDir_27 = tmpvar_29;
+				half tmpvar_30;
+				tmpvar_30 = max((half)0.0, dot(tmpvar_28, lightDir_22));
+				diff_26 = tmpvar_30;
+				half tmpvar_31;
+				tmpvar_31 = max((half)0.0, dot(tmpvar_28, halfDir_27));
+				half tmpvar_32;
+				tmpvar_32 = (pow(tmpvar_31, (_mtl_u._Shininess * (half)128.0)) * tmpvar_8);
+				spec_25 = tmpvar_32;
+				c_24.xyz = (_mtl_u._LightColor0.xyz * ((tmpvar_7 * diff_26) + (spec_25 * _mtl_u._SpecColor.xyz)));
+				c_24.w = (tmpvar_9 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * spec_25));
+				_mtl_o._glesFragData_0 = c_24;
 				return _mtl_o;
 			}
 
@@ -15149,11 +15771,14 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 66 math, 4 textures
+			// Stats: 71 math, 4 textures
 			Keywords{ "SPOT" }
 				Matrix 0[_LightMatrix0]
+				Vector 10[_BurnColor]
 				Vector 6[_LightColor0]
-				Float 7[_Shininess]
+				Float 9[_Opacity]
+				Float 8[_Shininess]
+				Vector 7[_SpecColor]
 				Vector 4[_WorldSpaceCameraPos]
 				Vector 5[_WorldSpaceLightPos0]
 				SetTexture 0[_LightTexture0] 2D 0
@@ -15161,9 +15786,9 @@ Shader "KSP/Specular Layered" {
 				SetTexture 2[_MainTex] 2D 2
 				SetTexture 3[_Emissive] 2D 3
 				"ps_3_0
-				def c8, 3, -2, -1, -1.39999998
-				def c9, 0.200000003, 1, 0, 0.5
-				def c10, 128, 0, 0, 0
+				def c11, 3, -2, -1, -1.39999998
+				def c12, 0.200000003, 1, 0, 0.5
+				def c13, 128, 0, 0, 0
 				dcl_texcoord v0
 				dcl_texcoord1_pp v1.z
 				dcl_texcoord2_pp v2.z
@@ -15174,7 +15799,7 @@ Shader "KSP/Specular Layered" {
 				dcl_2d s1
 				dcl_2d s2
 				dcl_2d s3
-				mul r0.x, c8.x, v0.z
+				mul r0.x, c11.x, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s2
 				mov r2.xz, r1
@@ -15182,69 +15807,77 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c8.x, c8.yzzw
+				mad_sat r0.xy, v0.z, c11.x, c11.yzzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, -c8.xzww
+				add r0.yz, -r1.x, -c11.xzww
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v5, r0.x
 				add r0.xyw, -r2.xyzz, v5.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v5.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c9.x
-				mul_pp r0.x, r1.x, r0.x
-				add r0.yzw, c4.xxyz, -v4.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
-				rsq r1.x, r1.x
-				add r1.yzw, c5.xxyz, -v4.xxyz
-				nrm_pp r3.xyz, r1.yzww
-				mad_pp r0.yzw, r0, r1.x, r3.xxyz
-				nrm_pp r1.xyz, r0.yzww
-				mov_pp r4.x, v1.z
-				mov_pp r4.y, v2.z
-				mov_pp r4.z, v3.z
-				nrm_pp r5.xyz, r4
-				dp3_pp r0.y, r5, r1
-				dp3_pp r0.z, r5, r3
-				max_pp r1.x, r0.z, c9.z
-				max_pp r1.y, r0.y, c9.z
-				mov r3.x, c7.x
-				mul_pp r0.y, r3.x, c10.x
-				pow_pp r2.w, r1.y, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.x, r0.x
-				mul_pp r0.xyz, r0, c6
-				mad r1, v4.xyzx, c9.yyyz, c9.zzzy
-				dp4 r0.w, c3, r1
-				rcp r0.w, r0.w
-				dp4 r2.x, c0, r1
-				dp4 r2.y, c1, r1
-				dp4 r2.z, c2, r1
-				mad r1.xy, r2, r0.w, c9.w
-				dp3 r0.w, r2, r2
-				texld_pp r3, r0.w, s1
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c10.xyzz
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c12.x
+				mul_pp r0.z, r1.x, r0.z
+				add r1.xyz, c4, -v4
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				add r2.xyz, c5, -v4
+				nrm_pp r3.xyz, r2
+				mad_pp r1.xyz, r1, r1.w, r3
+				nrm_pp r2.xyz, r1
+				mov_pp r1.x, v1.z
+				mov_pp r1.y, v2.z
+				mov_pp r1.z, v3.z
+				nrm_pp r4.xyz, r1
+				dp3_pp r1.x, r4, r2
+				dp3_pp r1.y, r4, r3
+				max_pp r2.x, r1.y, c12.z
+				max_pp r2.y, r1.x, c12.z
+				mov r1.x, c8.x
+				mul_pp r1.x, r1.x, c13.x
+				pow_pp r3.x, r2.y, r1.x
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r1.xyz, r0.z, c7
+				mad_pp r0.xyw, r0, r2.x, r1.xyzz
+				mul_pp r0.xyw, r0, c6.xyzz
+				mad r1, v4.xyzx, c12.yyyz, c12.zzzy
+				dp4 r2.x, c3, r1
+				rcp r2.x, r2.x
+				dp4 r3.x, c0, r1
+				dp4 r3.y, c1, r1
+				dp4 r3.z, c2, r1
+				mad r1.xy, r3, r2.x, c12.w
+				dp3 r1.z, r3, r3
+				texld_pp r2, r1.z, s1
 				texld_pp r1, r1, s0
-				mul_pp r0.w, r3.x, r1.w
-				cmp_pp r0.w, -r2.z, c9.z, r0.w
-				mul_pp oC0.xyz, r0.w, r0
-				mov_pp oC0.w, -c8.z
+				mul_pp r1.x, r2.x, r1.w
+				cmp_pp r1.x, -r3.z, c12.z, r1.x
+				mul_pp oC0.xyz, r0.xyww, r1.x
+				mov r0.w, c6.w
+				mul_pp r0.x, r0.w, c7.w
+				mul_pp r0.x, r0.z, r0.x
+				mad_pp oC0.w, r0.x, r1.x, c9.x
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 55 math, 4 textures
+			// Stats: 60 math, 4 textures
 			Keywords{ "SPOT" }
 				SetTexture 0[_MainTex] 2D 2
 				SetTexture 1[_Emissive] 2D 3
 				SetTexture 2[_LightTexture0] 2D 0
 				SetTexture 3[_LightTextureB0] 2D 1
-				ConstBuffer "$Globals" 272
+				ConstBuffer "$Globals" 304
 				Matrix 144[_LightMatrix0]
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 208[_Shininess]
+				Float 212[_Opacity]
+				Vector 256[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -15254,7 +15887,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:aeadaeaa
-				eefiecedampepohjllgfcgjiifkmbbhpkkkpbkfnabaaaaaaeaakaaaaadaaaaaa
+				eefiecedppjbfkfgmdjmkenpbcgihmjoohiglkkjabaaaaaaneakaaaaadaaaaaa
 				cmaaaaaaaaabaaaadeabaaaaejfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -15263,8 +15896,8 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaafaaaaaaahahaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaa
 				apapaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaakl
 				epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcaeajaaaaeaaaaaaa
-				ebacaaaafjaaaaaeegiocaaaaaaaaaaaaoaaaaaafjaaaaaeegiocaaaabaaaaaa
+				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcjiajaaaaeaaaaaaa
+				ggacaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaaabaaaaaa
 				afaaaaaafjaaaaaeegiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaa
 				fkaaaaadaagabaaaabaaaaaafkaaaaadaagabaaaacaaaaaafkaaaaadaagabaaa
 				adaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaafibiaaaeaahabaaaabaaaaaa
@@ -15295,7 +15928,8 @@ Shader "KSP/Specular Layered" {
 				agajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaafgafbaia
 				ebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaadkbabaaa
 				agaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaaabaaaaaa
-				fgafbaaaaaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaabkaabaaa
+				fgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaa
+				aaaaaaaabaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaabkaabaaa
 				abaaaaaadcaaaaajbcaabaaaabaaaaaabkaabaaaabaaaaaaakaabaaaabaaaaaa
 				abeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaa
 				abaaaaaaaaaaaaajhcaabaaaabaaaaaaegbcbaiaebaaaaaaafaaaaaaegiccaaa
@@ -15319,8 +15953,9 @@ Shader "KSP/Specular Layered" {
 				akiacaaaaaaaaaaaanaaaaaaabeaaaaaaaaaaaeddiaaaaahccaabaaaabaaaaaa
 				bkaabaaaabaaaaaackaabaaaabaaaaaabjaaaaafccaabaaaabaaaaaabkaabaaa
 				abaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaabkaabaaaabaaaaaa
-				dcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaaagaabaaaabaaaaaaagaabaaa
-				aaaaaaaadiaaaaaihcaabaaaaaaaaaaaegacbaaaaaaaaaaaegiccaaaaaaaaaaa
+				diaaaaaiocaabaaaabaaaaaaagaabaaaaaaaaaaaagijcaaaaaaaaaaaahaaaaaa
+				dcaaaaajocaabaaaaaaaaaaafgaobaaaaaaaaaaaagaabaaaabaaaaaafgaobaaa
+				abaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaaaaaaaaaa
 				agaaaaaadiaaaaaipcaabaaaabaaaaaafgbfbaaaafaaaaaaegiocaaaaaaaaaaa
 				akaaaaaadcaaaaakpcaabaaaabaaaaaaegiocaaaaaaaaaaaajaaaaaaagbabaaa
 				afaaaaaaegaobaaaabaaaaaadcaaaaakpcaabaaaabaaaaaaegiocaaaaaaaaaaa
@@ -15329,14 +15964,16 @@ Shader "KSP/Specular Layered" {
 				egaabaaaabaaaaaapgapbaaaabaaaaaaaaaaaaakdcaabaaaacaaaaaaegaabaaa
 				acaaaaaaaceaaaaaaaaaaadpaaaaaadpaaaaaaaaaaaaaaaaefaaaaajpcaabaaa
 				acaaaaaaegaabaaaacaaaaaaeghobaaaacaaaaaaaagabaaaaaaaaaaadbaaaaah
-				icaabaaaaaaaaaaaabeaaaaaaaaaaaaackaabaaaabaaaaaabaaaaaahbcaabaaa
-				abaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaabaaaaaa
-				agaabaaaabaaaaaaeghobaaaadaaaaaaaagabaaaabaaaaaaabaaaaahicaabaaa
-				aaaaaaaadkaabaaaaaaaaaaaabeaaaaaaaaaiadpdiaaaaahicaabaaaaaaaaaaa
-				dkaabaaaacaaaaaadkaabaaaaaaaaaaadiaaaaahicaabaaaaaaaaaaaakaabaaa
-				abaaaaaadkaabaaaaaaaaaaadiaaaaahhccabaaaaaaaaaaapgapbaaaaaaaaaaa
-				egacbaaaaaaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaaaaaaiadpdoaaaaab
-				"
+				icaabaaaabaaaaaaabeaaaaaaaaaaaaackaabaaaabaaaaaabaaaaaahbcaabaaa
+				abaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaadaaaaaa
+				agaabaaaabaaaaaaeghobaaaadaaaaaaaagabaaaabaaaaaaabaaaaahbcaabaaa
+				abaaaaaadkaabaaaabaaaaaaabeaaaaaaaaaiadpdiaaaaahbcaabaaaabaaaaaa
+				dkaabaaaacaaaaaaakaabaaaabaaaaaadiaaaaahbcaabaaaabaaaaaaakaabaaa
+				adaaaaaaakaabaaaabaaaaaadiaaaaahhccabaaaaaaaaaaajgahbaaaaaaaaaaa
+				agaabaaaabaaaaaadiaaaaajccaabaaaaaaaaaaadkiacaaaaaaaaaaaagaaaaaa
+				dkiacaaaaaaaaaaaahaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaa
+				bkaabaaaaaaaaaaadcaaaaakiccabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaa
+				abaaaaaabkiacaaaaaaaaaaaanaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
 			Keywords{ "SPOT" }
@@ -15347,18 +15984,21 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 52 math, 4 textures
+			// Stats: 56 math, 4 textures
 			Keywords{ "SPOT" }
 				SetTexture 0[_LightTexture0] 2D 0
 				SetTexture 1[_LightTextureB0] 2D 1
 				SetTexture 2[_MainTex] 2D 2
 				SetTexture 3[_Emissive] 2D 3
-				ConstBuffer "$Globals" 74
-				MatrixHalf 40[_LightMatrix0]
+				ConstBuffer "$Globals" 112
+				MatrixHalf 48[_LightMatrix0]
 				Vector 0[_WorldSpaceCameraPos] 3
 				Vector 16[_WorldSpaceLightPos0]
 				VectorHalf 32[_LightColor0] 4
-				ScalarHalf 72[_Shininess]
+				VectorHalf 40[_SpecColor] 4
+				ScalarHalf 80[_Shininess]
+				Float 84[_Opacity]
+				Vector 96[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -15377,8 +16017,11 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				float4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half4x4 _LightMatrix0;
 				half _Shininess;
+				float _Opacity;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _LightTexture0[[texture(0)]], sampler _mtlsmp__LightTexture0[[sampler(0)]]
@@ -15388,98 +16031,110 @@ Shader "KSP/Specular Layered" {
 			{
 				xlatMtlShaderOutput _mtl_o;
 				half3 worldN_1;
-				half4 c_2;
-				half atten_3;
-				half4 lightCoord_4;
-				half3 worldViewDir_5;
-				half3 lightDir_6;
-				float4 tmpvar_7;
+				half atten_2;
+				half4 lightCoord_3;
+				half3 worldViewDir_4;
+				half3 lightDir_5;
+				float4 tmpvar_6;
+				float3 tmpvar_7;
+				tmpvar_7 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
+				lightDir_5 = half3(tmpvar_7);
 				float3 tmpvar_8;
-				tmpvar_8 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
-				lightDir_6 = half3(tmpvar_8);
-				float3 tmpvar_9;
-				tmpvar_9 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
-				worldViewDir_5 = half3(tmpvar_9);
-				half3 tmpvar_10;
-				tmpvar_10 = normalize((worldViewDir_5 + lightDir_6));
-				worldViewDir_5 = tmpvar_10;
-				tmpvar_7 = float4(_mtl_i.xlv_COLOR0);
-				half3 tmpvar_11;
-				half tmpvar_12;
-				float4 mask_13;
-				float4 color_14;
+				tmpvar_8 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
+				worldViewDir_4 = half3(tmpvar_8);
+				tmpvar_6 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_9;
+				half tmpvar_10;
+				half tmpvar_11;
+				float4 mask_12;
+				float4 color_13;
+				half4 tmpvar_14;
+				tmpvar_14 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_13 = float4(tmpvar_14);
 				half4 tmpvar_15;
-				tmpvar_15 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_14 = float4(tmpvar_15);
-				half4 tmpvar_16;
-				tmpvar_16 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_13 = float4(tmpvar_16);
+				tmpvar_15 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_12 = float4(tmpvar_15);
+				float2 tmpvar_16;
+				tmpvar_16.x = color_13.x;
+				tmpvar_16.y = mask_12.x;
 				float2 tmpvar_17;
-				tmpvar_17.x = color_14.x;
-				tmpvar_17.y = mask_13.x;
+				tmpvar_17.x = color_13.y;
+				tmpvar_17.y = mask_12.y;
 				float2 tmpvar_18;
-				tmpvar_18.x = color_14.y;
-				tmpvar_18.y = mask_13.y;
+				tmpvar_18.x = color_13.z;
+				tmpvar_18.y = mask_12.z;
 				float2 tmpvar_19;
-				tmpvar_19.x = color_14.z;
-				tmpvar_19.y = mask_13.z;
+				tmpvar_19.x = color_13.w;
+				tmpvar_19.y = mask_12.w;
 				float2 tmpvar_20;
-				tmpvar_20.x = color_14.w;
-				tmpvar_20.y = mask_13.w;
-				float2 tmpvar_21;
-				float tmpvar_22;
-				tmpvar_22 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
-				tmpvar_21 = mix(mix(tmpvar_17, tmpvar_18, float2(clamp(tmpvar_22, 0.0, 1.0))), mix(tmpvar_19, tmpvar_20, float2(clamp(
-					(tmpvar_22 - 2.0)
-					, 0.0, 1.0))), float2(clamp((tmpvar_22 - 1.0), 0.0, 1.0)));
-				float3 tmpvar_23;
-				tmpvar_23 = mix(tmpvar_21.xxx, mix(mix(float3(
-					clamp((tmpvar_21.x + ((1.0 - tmpvar_21.y) * (tmpvar_21.x * tmpvar_21.x))), 0.0, 1.0)
-					), tmpvar_7.xyz, tmpvar_21.yyy), tmpvar_7.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_7.w, 0.0, 1.0)));
-				tmpvar_11 = half3(tmpvar_23);
-				float tmpvar_24;
-				tmpvar_24 = pow(((1.0 - tmpvar_21.y) + 0.4), 3.0);
-				tmpvar_12 = half(((tmpvar_24 + 0.2) * tmpvar_21.y));
+				float tmpvar_21;
+				tmpvar_21 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
+				tmpvar_20 = mix(mix(tmpvar_16, tmpvar_17, float2(clamp(tmpvar_21, 0.0, 1.0))), mix(tmpvar_18, tmpvar_19, float2(clamp(
+					(tmpvar_21 - 2.0)
+					, 0.0, 1.0))), float2(clamp((tmpvar_21 - 1.0), 0.0, 1.0)));
+				float3 tmpvar_22;
+				tmpvar_22 = mix(tmpvar_20.xxx, mix(mix(float3(
+					clamp((tmpvar_20.x + ((1.0 - tmpvar_20.y) * (tmpvar_20.x * tmpvar_20.x))), 0.0, 1.0)
+					), tmpvar_6.xyz, tmpvar_20.yyy), tmpvar_6.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_6.w, 0.0, 1.0)));
+				tmpvar_9 = half3((tmpvar_22 * _mtl_u._BurnColor.xyz));
+				float tmpvar_23;
+				tmpvar_23 = pow(((1.0 - tmpvar_20.y) + 0.4), 3.0);
+				tmpvar_10 = half(((tmpvar_23 + 0.2) * tmpvar_20.y));
+				tmpvar_11 = half(_mtl_u._Opacity);
+				float4 tmpvar_24;
+				tmpvar_24.w = 1.0;
+				tmpvar_24.xyz = _mtl_i.xlv_TEXCOORD4;
 				float4 tmpvar_25;
-				tmpvar_25.w = 1.0;
-				tmpvar_25.xyz = _mtl_i.xlv_TEXCOORD4;
-				float4 tmpvar_26;
-				tmpvar_26 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_25));
-				lightCoord_4 = half4(tmpvar_26);
-				half4 tmpvar_27;
-				half2 P_28;
-				P_28 = ((lightCoord_4.xy / lightCoord_4.w) + (half)0.5);
-				tmpvar_27 = _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(P_28));
-				float3 LightCoord_29;
-				LightCoord_29 = float3(lightCoord_4.xyz);
-				float tmpvar_30;
-				tmpvar_30 = dot(LightCoord_29, LightCoord_29);
-				half4 tmpvar_31;
-				tmpvar_31 = _LightTextureB0.sample(_mtlsmp__LightTextureB0, (float2)(float2(tmpvar_30)));
-				half tmpvar_32;
-				tmpvar_32 = ((half(
-					(lightCoord_4.z > (half)0.0)
-					) * tmpvar_27.w) * tmpvar_31.w);
-				atten_3 = tmpvar_32;
+				tmpvar_25 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_24));
+				lightCoord_3 = half4(tmpvar_25);
+				half4 tmpvar_26;
+				half2 P_27;
+				P_27 = ((lightCoord_3.xy / lightCoord_3.w) + (half)0.5);
+				tmpvar_26 = _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(P_27));
+				float3 LightCoord_28;
+				LightCoord_28 = float3(lightCoord_3.xyz);
+				float tmpvar_29;
+				tmpvar_29 = dot(LightCoord_28, LightCoord_28);
+				half4 tmpvar_30;
+				tmpvar_30 = _LightTextureB0.sample(_mtlsmp__LightTextureB0, (float2)(float2(tmpvar_29)));
+				half tmpvar_31;
+				tmpvar_31 = ((half(
+					(lightCoord_3.z > (half)0.0)
+					) * tmpvar_26.w) * tmpvar_30.w);
+				atten_2 = tmpvar_31;
 				worldN_1.x = _mtl_i.xlv_TEXCOORD1.z;
 				worldN_1.y = _mtl_i.xlv_TEXCOORD2.z;
 				worldN_1.z = _mtl_i.xlv_TEXCOORD3.z;
-				half4 c_33;
-				half spec_34;
-				half3 tmpvar_35;
-				tmpvar_35 = normalize(worldN_1);
-				half tmpvar_36;
-				tmpvar_36 = max((half)0.0, dot(tmpvar_35, tmpvar_10));
-				half tmpvar_37;
-				tmpvar_37 = (pow(tmpvar_36, (_mtl_u._Shininess * (half)128.0)) * tmpvar_12);
-				spec_34 = tmpvar_37;
-				c_33.xyz = ((_mtl_u._LightColor0.xyz * (
-					(tmpvar_11 * max((half)0.0, dot(tmpvar_35, lightDir_6)))
-					+ spec_34)) * atten_3);
-				c_33.w = half(1.0);
-				c_2.xyz = c_33.xyz;
-				c_2.w = half(1.0);
-				_mtl_o._glesFragData_0 = c_2;
+				half3 lightDir_32;
+				lightDir_32 = lightDir_5;
+				half3 viewDir_33;
+				viewDir_33 = worldViewDir_4;
+				half atn_34;
+				atn_34 = atten_2;
+				half4 c_35;
+				half spec_36;
+				half diff_37;
+				half3 halfDir_38;
+				half3 tmpvar_39;
+				tmpvar_39 = normalize(worldN_1);
+				half3 tmpvar_40;
+				tmpvar_40 = normalize((lightDir_32 + viewDir_33));
+				halfDir_38 = tmpvar_40;
+				half tmpvar_41;
+				tmpvar_41 = max((half)0.0, dot(tmpvar_39, lightDir_32));
+				diff_37 = tmpvar_41;
+				half tmpvar_42;
+				tmpvar_42 = max((half)0.0, dot(tmpvar_39, halfDir_38));
+				half tmpvar_43;
+				tmpvar_43 = (pow(tmpvar_42, (_mtl_u._Shininess * (half)128.0)) * tmpvar_10);
+				spec_36 = tmpvar_43;
+				c_35.xyz = ((_mtl_u._LightColor0.xyz * (
+					(tmpvar_9 * diff_37)
+					+
+					(spec_36 * _mtl_u._SpecColor.xyz)
+					)) * atn_34);
+				c_35.w = (tmpvar_11 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * (spec_36 * atn_34)));
+				_mtl_o._glesFragData_0 = c_35;
 				return _mtl_o;
 			}
 
@@ -15494,11 +16149,14 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 62 math, 4 textures
+			// Stats: 67 math, 4 textures
 			Keywords{ "POINT_COOKIE" }
 				Matrix 0[_LightMatrix0] 3
+				Vector 9[_BurnColor]
 				Vector 5[_LightColor0]
-				Float 6[_Shininess]
+				Float 8[_Opacity]
+				Float 7[_Shininess]
+				Vector 6[_SpecColor]
 				Vector 3[_WorldSpaceCameraPos]
 				Vector 4[_WorldSpaceLightPos0]
 				SetTexture 0[_LightTexture0] CUBE 0
@@ -15506,8 +16164,8 @@ Shader "KSP/Specular Layered" {
 				SetTexture 2[_MainTex] 2D 2
 				SetTexture 3[_Emissive] 2D 3
 				"ps_3_0
-				def c7, 3, -2, -1, -1.39999998
-				def c8, 0.200000003, 1, 0, 128
+				def c10, 3, -2, -1, -1.39999998
+				def c11, 0.200000003, 1, 0, 128
 				dcl_texcoord v0
 				dcl_texcoord1_pp v1.z
 				dcl_texcoord2_pp v2.z
@@ -15518,7 +16176,7 @@ Shader "KSP/Specular Layered" {
 				dcl_2d s1
 				dcl_2d s2
 				dcl_2d s3
-				mul r0.x, c7.x, v0.z
+				mul r0.x, c10.x, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s2
 				mov r2.xz, r1
@@ -15526,65 +16184,73 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c7.x, c7.yzzw
+				mad_sat r0.xy, v0.z, c10.x, c10.yzzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, -c7.xzww
+				add r0.yz, -r1.x, -c10.xzww
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v5, r0.x
 				add r0.xyw, -r2.xyzz, v5.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v5.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c8.x
-				mul_pp r0.x, r1.x, r0.x
-				add r0.yzw, c3.xxyz, -v4.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
-				rsq r1.x, r1.x
-				add r1.yzw, c4.xxyz, -v4.xxyz
-				nrm_pp r3.xyz, r1.yzww
-				mad_pp r0.yzw, r0, r1.x, r3.xxyz
-				nrm_pp r1.xyz, r0.yzww
-				mov_pp r4.x, v1.z
-				mov_pp r4.y, v2.z
-				mov_pp r4.z, v3.z
-				nrm_pp r5.xyz, r4
-				dp3_pp r0.y, r5, r1
-				dp3_pp r0.z, r5, r3
-				max_pp r1.x, r0.z, c8.z
-				max_pp r1.y, r0.y, c8.z
-				mov r0.w, c8.w
-				mul_pp r0.y, r0.w, c6.x
-				pow_pp r2.w, r1.y, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.x, r0.x
-				mul_pp r0.xyz, r0, c5
-				mad r1, v4.xyzx, c8.yyyz, c8.zzzy
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c9.xyzz
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c11.x
+				mul_pp r0.z, r1.x, r0.z
+				add r1.xyz, c3, -v4
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				add r2.xyz, c4, -v4
+				nrm_pp r3.xyz, r2
+				mad_pp r1.xyz, r1, r1.w, r3
+				nrm_pp r2.xyz, r1
+				mov_pp r1.x, v1.z
+				mov_pp r1.y, v2.z
+				mov_pp r1.z, v3.z
+				nrm_pp r4.xyz, r1
+				dp3_pp r1.x, r4, r2
+				dp3_pp r1.y, r4, r3
+				max_pp r2.x, r1.y, c11.z
+				max_pp r2.y, r1.x, c11.z
+				mov r1.w, c11.w
+				mul_pp r1.x, r1.w, c7.x
+				pow_pp r3.x, r2.y, r1.x
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r1.xyz, r0.z, c6
+				mad_pp r0.xyw, r0, r2.x, r1.xyzz
+				mul_pp r0.xyw, r0, c5.xyzz
+				mad r1, v4.xyzx, c11.yyyz, c11.zzzy
 				dp4 r2.x, c0, r1
 				dp4 r2.y, c1, r1
 				dp4 r2.z, c2, r1
-				dp3 r0.w, r2, r2
-				texld r1, r2, s0
-				texld r2, r0.w, s1
-				mul_pp r0.w, r1.w, r2.x
-				mul_pp oC0.xyz, r0.w, r0
-				mov_pp oC0.w, -c7.z
+				dp3 r1.x, r2, r2
+				texld r2, r2, s0
+				texld r1, r1.x, s1
+				mul_pp r1.x, r2.w, r1.x
+				mul_pp oC0.xyz, r0.xyww, r1.x
+				mov r0.w, c5.w
+				mul_pp r0.x, r0.w, c6.w
+				mul_pp r0.x, r0.z, r0.x
+				mad_pp oC0.w, r0.x, r1.x, c8.x
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 50 math, 4 textures
+			// Stats: 55 math, 4 textures
 			Keywords{ "POINT_COOKIE" }
 				SetTexture 0[_MainTex] 2D 2
 				SetTexture 1[_Emissive] 2D 3
 				SetTexture 2[_LightTextureB0] 2D 1
 				SetTexture 3[_LightTexture0] CUBE 0
-				ConstBuffer "$Globals" 272
+				ConstBuffer "$Globals" 304
 				Matrix 144[_LightMatrix0]
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 208[_Shininess]
+				Float 212[_Opacity]
+				Vector 256[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -15594,7 +16260,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:aeadaeaa
-				eefiecedgkficgfdmbkmakkgmeclcmhpdbbckkclabaaaaaakiajaaaaadaaaaaa
+				eefiecedfpapbebcfbppapopglnfebgoaojejpjeabaaaaaadmakaaaaadaaaaaa
 				cmaaaaaaaaabaaaadeabaaaaejfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -15603,8 +16269,8 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaafaaaaaaahahaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaa
 				apapaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaakl
 				epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcgmaiaaaaeaaaaaaa
-				blacaaaafjaaaaaeegiocaaaaaaaaaaaaoaaaaaafjaaaaaeegiocaaaabaaaaaa
+				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcaaajaaaaeaaaaaaa
+				eaacaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaaabaaaaaa
 				afaaaaaafjaaaaaeegiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaa
 				fkaaaaadaagabaaaabaaaaaafkaaaaadaagabaaaacaaaaaafkaaaaadaagabaaa
 				adaaaaaafibiaaaeaahabaaaaaaaaaaaffffaaaafibiaaaeaahabaaaabaaaaaa
@@ -15635,7 +16301,8 @@ Shader "KSP/Specular Layered" {
 				agajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaafgafbaia
 				ebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaadkbabaaa
 				agaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaaabaaaaaa
-				fgafbaaaaaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaabkaabaaa
+				fgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaa
+				aaaaaaaabaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaabkaabaaa
 				abaaaaaadcaaaaajbcaabaaaabaaaaaabkaabaaaabaaaaaaakaabaaaabaaaaaa
 				abeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaa
 				abaaaaaaaaaaaaajhcaabaaaabaaaaaaegbcbaiaebaaaaaaafaaaaaaegiccaaa
@@ -15659,19 +16326,22 @@ Shader "KSP/Specular Layered" {
 				akiacaaaaaaaaaaaanaaaaaaabeaaaaaaaaaaaeddiaaaaahccaabaaaabaaaaaa
 				bkaabaaaabaaaaaackaabaaaabaaaaaabjaaaaafccaabaaaabaaaaaabkaabaaa
 				abaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaabkaabaaaabaaaaaa
-				dcaaaaajhcaabaaaaaaaaaaajgahbaaaaaaaaaaaagaabaaaabaaaaaaagaabaaa
-				aaaaaaaadiaaaaaihcaabaaaaaaaaaaaegacbaaaaaaaaaaaegiccaaaaaaaaaaa
+				diaaaaaiocaabaaaabaaaaaaagaabaaaaaaaaaaaagijcaaaaaaaaaaaahaaaaaa
+				dcaaaaajocaabaaaaaaaaaaafgaobaaaaaaaaaaaagaabaaaabaaaaaafgaobaaa
+				abaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaaagijcaaaaaaaaaaa
 				agaaaaaadiaaaaaihcaabaaaabaaaaaafgbfbaaaafaaaaaaegiccaaaaaaaaaaa
 				akaaaaaadcaaaaakhcaabaaaabaaaaaaegiccaaaaaaaaaaaajaaaaaaagbabaaa
 				afaaaaaaegacbaaaabaaaaaadcaaaaakhcaabaaaabaaaaaaegiccaaaaaaaaaaa
 				alaaaaaakgbkbaaaafaaaaaaegacbaaaabaaaaaaaaaaaaaihcaabaaaabaaaaaa
-				egacbaaaabaaaaaaegiccaaaaaaaaaaaamaaaaaabaaaaaahicaabaaaaaaaaaaa
-				egacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaabaaaaaaegacbaaa
-				abaaaaaaeghobaaaadaaaaaaaagabaaaaaaaaaaaefaaaaajpcaabaaaacaaaaaa
-				pgapbaaaaaaaaaaaeghobaaaacaaaaaaaagabaaaabaaaaaadiaaaaahicaabaaa
-				aaaaaaaadkaabaaaabaaaaaaakaabaaaacaaaaaadiaaaaahhccabaaaaaaaaaaa
-				pgapbaaaaaaaaaaaegacbaaaaaaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaa
-				aaaaiadpdoaaaaab"
+				egacbaaaabaaaaaaegiccaaaaaaaaaaaamaaaaaabaaaaaahicaabaaaabaaaaaa
+				egacbaaaabaaaaaaegacbaaaabaaaaaaefaaaaajpcaabaaaacaaaaaaegacbaaa
+				abaaaaaaeghobaaaadaaaaaaaagabaaaaaaaaaaaefaaaaajpcaabaaaabaaaaaa
+				pgapbaaaabaaaaaaeghobaaaacaaaaaaaagabaaaabaaaaaadiaaaaahbcaabaaa
+				abaaaaaadkaabaaaacaaaaaaakaabaaaabaaaaaadiaaaaahhccabaaaaaaaaaaa
+				jgahbaaaaaaaaaaaagaabaaaabaaaaaadiaaaaajccaabaaaaaaaaaaadkiacaaa
+				aaaaaaaaagaaaaaadkiacaaaaaaaaaaaahaaaaaadiaaaaahbcaabaaaaaaaaaaa
+				akaabaaaaaaaaaaabkaabaaaaaaaaaaadcaaaaakiccabaaaaaaaaaaaakaabaaa
+				aaaaaaaaakaabaaaabaaaaaabkiacaaaaaaaaaaaanaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
 			Keywords{ "POINT_COOKIE" }
@@ -15682,18 +16352,21 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 47 math, 4 textures
+			// Stats: 51 math, 4 textures
 			Keywords{ "POINT_COOKIE" }
 				SetTexture 0[_LightTexture0] CUBE 0
 				SetTexture 1[_LightTextureB0] 2D 1
 				SetTexture 2[_MainTex] 2D 2
 				SetTexture 3[_Emissive] 2D 3
-				ConstBuffer "$Globals" 74
-				MatrixHalf 40[_LightMatrix0]
+				ConstBuffer "$Globals" 112
+				MatrixHalf 48[_LightMatrix0]
 				Vector 0[_WorldSpaceCameraPos] 3
 				Vector 16[_WorldSpaceLightPos0]
 				VectorHalf 32[_LightColor0] 4
-				ScalarHalf 72[_Shininess]
+				VectorHalf 40[_SpecColor] 4
+				ScalarHalf 80[_Shininess]
+				Float 84[_Opacity]
+				Vector 96[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -15712,8 +16385,11 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				float4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half4x4 _LightMatrix0;
 				half _Shininess;
+				float _Opacity;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texturecube<half> _LightTexture0[[texture(0)]], sampler _mtlsmp__LightTexture0[[sampler(0)]]
@@ -15723,82 +16399,96 @@ Shader "KSP/Specular Layered" {
 			{
 				xlatMtlShaderOutput _mtl_o;
 				half3 worldN_1;
-				half4 c_2;
-				half3 worldViewDir_3;
-				half3 lightDir_4;
-				float4 tmpvar_5;
+				half3 worldViewDir_2;
+				half3 lightDir_3;
+				float4 tmpvar_4;
+				float3 tmpvar_5;
+				tmpvar_5 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
+				lightDir_3 = half3(tmpvar_5);
 				float3 tmpvar_6;
-				tmpvar_6 = normalize((_mtl_u._WorldSpaceLightPos0.xyz - _mtl_i.xlv_TEXCOORD4));
-				lightDir_4 = half3(tmpvar_6);
-				float3 tmpvar_7;
-				tmpvar_7 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
-				worldViewDir_3 = half3(tmpvar_7);
-				half3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = float4(_mtl_i.xlv_COLOR0);
-				half3 tmpvar_9;
-				half tmpvar_10;
-				float4 mask_11;
-				float4 color_12;
+				tmpvar_6 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
+				worldViewDir_2 = half3(tmpvar_6);
+				tmpvar_4 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_7;
+				half tmpvar_8;
+				half tmpvar_9;
+				float4 mask_10;
+				float4 color_11;
+				half4 tmpvar_12;
+				tmpvar_12 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_11 = float4(tmpvar_12);
 				half4 tmpvar_13;
-				tmpvar_13 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_12 = float4(tmpvar_13);
-				half4 tmpvar_14;
-				tmpvar_14 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_11 = float4(tmpvar_14);
+				tmpvar_13 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_10 = float4(tmpvar_13);
+				float2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
 				float2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
 				float2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
 				float2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
 				float2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				float2 tmpvar_19;
-				float tmpvar_20;
-				tmpvar_20 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, float2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, float2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), float2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				float3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(float3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = half3(tmpvar_21);
-				float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = half(((tmpvar_22 + 0.2) * tmpvar_19.y));
-				float4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = _mtl_i.xlv_TEXCOORD4;
-				float3 tmpvar_24;
-				tmpvar_24 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_23)).xyz;
-				float tmpvar_25;
-				tmpvar_25 = dot(tmpvar_24, tmpvar_24);
+				float tmpvar_19;
+				tmpvar_19 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, float2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, float2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), float2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				float3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(float3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+					), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = half3((tmpvar_20 * _mtl_u._BurnColor.xyz));
+				float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = half(((tmpvar_21 + 0.2) * tmpvar_18.y));
+				tmpvar_9 = half(_mtl_u._Opacity);
+				float4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = _mtl_i.xlv_TEXCOORD4;
+				float3 tmpvar_23;
+				tmpvar_23 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_22)).xyz;
+				float tmpvar_24;
+				tmpvar_24 = dot(tmpvar_23, tmpvar_23);
+				half tmpvar_25;
+				tmpvar_25 = (_LightTextureB0.sample(_mtlsmp__LightTextureB0, (float2)(float2(tmpvar_24))).w * _LightTexture0.sample(_mtlsmp__LightTexture0, (float3)(tmpvar_23)).w);
 				worldN_1.x = _mtl_i.xlv_TEXCOORD1.z;
 				worldN_1.y = _mtl_i.xlv_TEXCOORD2.z;
 				worldN_1.z = _mtl_i.xlv_TEXCOORD3.z;
-				half4 c_26;
-				half spec_27;
-				half3 tmpvar_28;
-				tmpvar_28 = normalize(worldN_1);
-				half tmpvar_29;
-				tmpvar_29 = max((half)0.0, dot(tmpvar_28, tmpvar_8));
-				half tmpvar_30;
-				tmpvar_30 = (pow(tmpvar_29, (_mtl_u._Shininess * (half)128.0)) * tmpvar_10);
-				spec_27 = tmpvar_30;
-				c_26.xyz = ((_mtl_u._LightColor0.xyz * (
-					(tmpvar_9 * max((half)0.0, dot(tmpvar_28, lightDir_4)))
-					+ spec_27)) * (_LightTextureB0.sample(_mtlsmp__LightTextureB0, (float2)(float2(tmpvar_25))).w * _LightTexture0.sample(_mtlsmp__LightTexture0, (float3)(tmpvar_24)).w));
-				c_26.w = half(1.0);
-				c_2.xyz = c_26.xyz;
-				c_2.w = half(1.0);
-				_mtl_o._glesFragData_0 = c_2;
+				half3 lightDir_26;
+				lightDir_26 = lightDir_3;
+				half3 viewDir_27;
+				viewDir_27 = worldViewDir_2;
+				half atn_28;
+				atn_28 = tmpvar_25;
+				half4 c_29;
+				half spec_30;
+				half diff_31;
+				half3 halfDir_32;
+				half3 tmpvar_33;
+				tmpvar_33 = normalize(worldN_1);
+				half3 tmpvar_34;
+				tmpvar_34 = normalize((lightDir_26 + viewDir_27));
+				halfDir_32 = tmpvar_34;
+				half tmpvar_35;
+				tmpvar_35 = max((half)0.0, dot(tmpvar_33, lightDir_26));
+				diff_31 = tmpvar_35;
+				half tmpvar_36;
+				tmpvar_36 = max((half)0.0, dot(tmpvar_33, halfDir_32));
+				half tmpvar_37;
+				tmpvar_37 = (pow(tmpvar_36, (_mtl_u._Shininess * (half)128.0)) * tmpvar_8);
+				spec_30 = tmpvar_37;
+				c_29.xyz = ((_mtl_u._LightColor0.xyz * (
+					(tmpvar_7 * diff_31)
+					+
+					(spec_30 * _mtl_u._SpecColor.xyz)
+					)) * atn_28);
+				c_29.w = (tmpvar_9 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * (spec_30 * atn_28)));
+				_mtl_o._glesFragData_0 = c_29;
 				return _mtl_o;
 			}
 
@@ -15813,19 +16503,22 @@ Shader "KSP/Specular Layered" {
 				"!!GLSL"
 		}
 		SubProgram "d3d9 " {
-			// Stats: 55 math, 3 textures
+			// Stats: 60 math, 3 textures
 			Keywords{ "DIRECTIONAL_COOKIE" }
 				Matrix 0[_LightMatrix0] 2
+				Vector 8[_BurnColor]
 				Vector 4[_LightColor0]
-				Float 5[_Shininess]
+				Float 7[_Opacity]
+				Float 6[_Shininess]
+				Vector 5[_SpecColor]
 				Vector 2[_WorldSpaceCameraPos]
 				Vector 3[_WorldSpaceLightPos0]
 				SetTexture 0[_LightTexture0] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
 				"ps_3_0
-				def c6, 3, -2, -1, -1.39999998
-				def c7, 0.200000003, 1, 0, 128
+				def c9, 3, -2, -1, -1.39999998
+				def c10, 0.200000003, 1, 0, 128
 				dcl_texcoord v0
 				dcl_texcoord1_pp v1.z
 				dcl_texcoord2_pp v2.z
@@ -15835,7 +16528,7 @@ Shader "KSP/Specular Layered" {
 				dcl_2d s0
 				dcl_2d s1
 				dcl_2d s2
-				mul r0.x, c6.x, v0.z
+				mul r0.x, c9.x, v0.z
 				mov_sat r0.x, r0.x
 				texld r1, v0, s1
 				mov r2.xz, r1
@@ -15843,58 +16536,66 @@ Shader "KSP/Specular Layered" {
 				mov r2.yw, r3.xxzz
 				mov r1.xz, r3.yyww
 				lrp r3.xy, r0.x, r1, r2.yxzw
-				mad_sat r0.xy, v0.z, c6.x, c6.yzzw
+				mad_sat r0.xy, v0.z, c9.x, c9.yzzw
 				lrp r3.zw, r0.x, r1, r2.xywz
 				lrp r1.xy, r0.y, r3.zwzw, r3
 				mul r0.x, r1.y, r1.y
-				add r0.yz, -r1.x, -c6.xzww
+				add r0.yz, -r1.x, -c9.xzww
 				mad_sat r0.x, r0.y, r0.x, r1.y
 				lrp r2.xyz, r1.x, v5, r0.x
 				add r0.xyw, -r2.xyzz, v5.xyzz
 				mad r0.xyw, v0.w, r0, r2.xyzz
 				mov_sat r1.z, v5.w
-				lrp_pp r2.xyz, r1.z, r0.xyww, r1.y
-				mul r0.x, r0.z, r0.z
-				mad r0.x, r0.z, r0.x, c7.x
-				mul_pp r0.x, r1.x, r0.x
-				add r0.yzw, c2.xxyz, -v4.xxyz
-				dp3 r1.x, r0.yzww, r0.yzww
-				rsq r1.x, r1.x
-				mad_pp r0.yzw, r0, r1.x, c3.xxyz
-				nrm_pp r1.xyz, r0.yzww
-				mov_pp r3.x, v1.z
-				mov_pp r3.y, v2.z
-				mov_pp r3.z, v3.z
-				nrm_pp r4.xyz, r3
-				dp3_pp r0.y, r4, r1
-				dp3_pp r0.z, r4, c3
-				max_pp r1.x, r0.z, c7.z
-				max_pp r1.y, r0.y, c7.z
-				mov r0.w, c7.w
-				mul_pp r0.y, r0.w, c5.x
-				pow_pp r2.w, r1.y, r0.y
-				mul_pp r0.x, r0.x, r2.w
-				mad_pp r0.xyz, r2, r1.x, r0.x
-				mul_pp r0.xyz, r0, c4
-				mad r1, v4.xyzx, c7.yyyz, c7.zzzy
+				lrp r2.xyz, r1.z, r0.xyww, r1.y
+				mul_pp r0.xyw, r2.xyzz, c8.xyzz
+				mul r1.y, r0.z, r0.z
+				mad r0.z, r0.z, r1.y, c10.x
+				mul_pp r0.z, r1.x, r0.z
+				add r1.xyz, c2, -v4
+				dp3 r1.w, r1, r1
+				rsq r1.w, r1.w
+				mad_pp r1.xyz, r1, r1.w, c3
+				nrm_pp r2.xyz, r1
+				mov_pp r1.x, v1.z
+				mov_pp r1.y, v2.z
+				mov_pp r1.z, v3.z
+				nrm_pp r3.xyz, r1
+				dp3_pp r1.x, r3, r2
+				dp3_pp r1.y, r3, c3
+				max_pp r2.x, r1.y, c10.z
+				max_pp r2.y, r1.x, c10.z
+				mov r1.w, c10.w
+				mul_pp r1.x, r1.w, c6.x
+				pow_pp r3.x, r2.y, r1.x
+				mul_pp r0.z, r0.z, r3.x
+				mul_pp r1.xyz, r0.z, c5
+				mad_pp r0.xyw, r0, r2.x, r1.xyzz
+				mul_pp r0.xyw, r0, c4.xyzz
+				mad r1, v4.xyzx, c10.yyyz, c10.zzzy
 				dp4 r2.x, c0, r1
 				dp4 r2.y, c1, r1
 				texld_pp r1, r2, s0
-				mul_pp oC0.xyz, r0, r1.w
-				mov_pp oC0.w, -c6.z
+				mul_pp oC0.xyz, r0.xyww, r1.w
+				mov r0.w, c4.w
+				mul_pp r0.x, r0.w, c5.w
+				mul_pp r0.x, r0.z, r0.x
+				mad_pp oC0.w, r0.x, r1.w, c7.x
 
 				"
 		}
 		SubProgram "d3d11 " {
-			// Stats: 44 math, 3 textures
+			// Stats: 50 math, 3 textures
 			Keywords{ "DIRECTIONAL_COOKIE" }
 				SetTexture 0[_MainTex] 2D 1
 				SetTexture 1[_Emissive] 2D 2
 				SetTexture 2[_LightTexture0] 2D 0
-				ConstBuffer "$Globals" 272
+				ConstBuffer "$Globals" 304
 				Matrix 144[_LightMatrix0]
 				Vector 96[_LightColor0]
+				Vector 112[_SpecColor]
 				Float 208[_Shininess]
+				Float 212[_Opacity]
+				Vector 256[_BurnColor]
 				ConstBuffer "UnityPerCamera" 144
 				Vector 64[_WorldSpaceCameraPos] 3
 				ConstBuffer "UnityLighting" 720
@@ -15904,7 +16605,7 @@ Shader "KSP/Specular Layered" {
 				BindCB  "UnityLighting" 2
 				"ps_4_0
 				root12:adadadaa
-				eefiecedelgemoicagneiifoahocmedbgbaipdngabaaaaaamiaiaaaaadaaaaaa
+				eefiecedloenkflehjgknpakhmabmiafgmbpaofbabaaaaaagmajaaaaadaaaaaa
 				cmaaaaaaaaabaaaadeabaaaaejfdeheommaaaaaaahaaaaaaaiaaaaaalaaaaaaa
 				aaaaaaaaabaaaaaaadaaaaaaaaaaaaaaapaaaaaalmaaaaaaaaaaaaaaaaaaaaaa
 				adaaaaaaabaaaaaaapapaaaalmaaaaaaabaaaaaaaaaaaaaaadaaaaaaacaaaaaa
@@ -15913,8 +16614,8 @@ Shader "KSP/Specular Layered" {
 				adaaaaaaafaaaaaaahahaaaamfaaaaaaaaaaaaaaaaaaaaaaadaaaaaaagaaaaaa
 				apapaaaafdfgfpfaepfdejfeejepeoaafeeffiedepepfceeaaedepemepfcaakl
 				epfdeheocmaaaaaaabaaaaaaaiaaaaaacaaaaaaaaaaaaaaaaaaaaaaaadaaaaaa
-				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcimahaaaaeaaaaaaa
-				odabaaaafjaaaaaeegiocaaaaaaaaaaaaoaaaaaafjaaaaaeegiocaaaabaaaaaa
+				aaaaaaaaapaaaaaafdfgfpfegbhcghgfheaaklklfdeieefcdaaiaaaaeaaaaaaa
+				amacaaaafjaaaaaeegiocaaaaaaaaaaabbaaaaaafjaaaaaeegiocaaaabaaaaaa
 				afaaaaaafjaaaaaeegiocaaaacaaaaaaabaaaaaafkaaaaadaagabaaaaaaaaaaa
 				fkaaaaadaagabaaaabaaaaaafkaaaaadaagabaaaacaaaaaafibiaaaeaahabaaa
 				aaaaaaaaffffaaaafibiaaaeaahabaaaabaaaaaaffffaaaafibiaaaeaahabaaa
@@ -15944,37 +16645,42 @@ Shader "KSP/Specular Layered" {
 				abaaaaaaagajbaaaacaaaaaaagaobaaaabaaaaaaaaaaaaaincaabaaaabaaaaaa
 				fgafbaiaebaaaaaaaaaaaaaaagaobaaaabaaaaaadgcaaaafecaabaaaaaaaaaaa
 				dkbabaaaagaaaaaadcaaaaajocaabaaaaaaaaaaakgakbaaaaaaaaaaaagaobaaa
-				abaaaaaafgafbaaaaaaaaaaadiaaaaahbcaabaaaabaaaaaabkaabaaaabaaaaaa
-				bkaabaaaabaaaaaadcaaaaajbcaabaaaabaaaaaabkaabaaaabaaaaaaakaabaaa
-				abaaaaaaabeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaa
-				akaabaaaabaaaaaaaaaaaaajhcaabaaaabaaaaaaegbcbaiaebaaaaaaafaaaaaa
-				egiccaaaabaaaaaaaeaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaaabaaaaaa
-				egacbaaaabaaaaaaeeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaadcaaaaak
-				hcaabaaaabaaaaaaegacbaaaabaaaaaapgapbaaaabaaaaaaegiccaaaacaaaaaa
-				aaaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaaabaaaaaaegacbaaaabaaaaaa
-				eeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaadiaaaaahhcaabaaaabaaaaaa
-				pgapbaaaabaaaaaaegacbaaaabaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaa
-				acaaaaaadgaaaaafccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaafecaabaaa
-				acaaaaaackbabaaaaeaaaaaabaaaaaahicaabaaaabaaaaaaegacbaaaacaaaaaa
-				egacbaaaacaaaaaaeeaaaaaficaabaaaabaaaaaadkaabaaaabaaaaaadiaaaaah
-				hcaabaaaacaaaaaapgapbaaaabaaaaaaegacbaaaacaaaaaabaaaaaahbcaabaaa
-				abaaaaaaegacbaaaacaaaaaaegacbaaaabaaaaaabaaaaaaiccaabaaaabaaaaaa
-				egacbaaaacaaaaaaegiccaaaacaaaaaaaaaaaaaadeaaaaakdcaabaaaabaaaaaa
-				egaabaaaabaaaaaaaceaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaacpaaaaaf
-				bcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaaiecaabaaaabaaaaaaakiacaaa
-				aaaaaaaaanaaaaaaabeaaaaaaaaaaaeddiaaaaahbcaabaaaabaaaaaaakaabaaa
-				abaaaaaackaabaaaabaaaaaabjaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaa
-				diaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaaakaabaaaabaaaaaadcaaaaaj
-				hcaabaaaaaaaaaaajgahbaaaaaaaaaaafgafbaaaabaaaaaaagaabaaaaaaaaaaa
-				diaaaaaihcaabaaaaaaaaaaaegacbaaaaaaaaaaaegiccaaaaaaaaaaaagaaaaaa
-				diaaaaaidcaabaaaabaaaaaafgbfbaaaafaaaaaaegiacaaaaaaaaaaaakaaaaaa
-				dcaaaaakdcaabaaaabaaaaaaegiacaaaaaaaaaaaajaaaaaaagbabaaaafaaaaaa
-				egaabaaaabaaaaaadcaaaaakdcaabaaaabaaaaaaegiacaaaaaaaaaaaalaaaaaa
-				kgbkbaaaafaaaaaaegaabaaaabaaaaaaaaaaaaaidcaabaaaabaaaaaaegaabaaa
-				abaaaaaaegiacaaaaaaaaaaaamaaaaaaefaaaaajpcaabaaaabaaaaaaegaabaaa
-				abaaaaaaeghobaaaacaaaaaaaagabaaaaaaaaaaadiaaaaahhccabaaaaaaaaaaa
-				egacbaaaaaaaaaaapgapbaaaabaaaaaadgaaaaaficcabaaaaaaaaaaaabeaaaaa
-				aaaaiadpdoaaaaab"
+				abaaaaaafgafbaaaaaaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaaaaaaaaaa
+				agijcaaaaaaaaaaabaaaaaaadgaaaaafbcaabaaaacaaaaaackbabaaaacaaaaaa
+				dgaaaaafccaabaaaacaaaaaackbabaaaadaaaaaadgaaaaafecaabaaaacaaaaaa
+				ckbabaaaaeaaaaaabaaaaaahbcaabaaaabaaaaaaegacbaaaacaaaaaaegacbaaa
+				acaaaaaaeeaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaahncaabaaa
+				abaaaaaaagaabaaaabaaaaaaagajbaaaacaaaaaabaaaaaaibcaabaaaacaaaaaa
+				igadbaaaabaaaaaaegiccaaaacaaaaaaaaaaaaaadeaaaaahbcaabaaaacaaaaaa
+				akaabaaaacaaaaaaabeaaaaaaaaaaaaadiaaaaahccaabaaaacaaaaaabkaabaaa
+				abaaaaaabkaabaaaabaaaaaadcaaaaajccaabaaaabaaaaaabkaabaaaabaaaaaa
+				bkaabaaaacaaaaaaabeaaaaamnmmemdodiaaaaahbcaabaaaaaaaaaaaakaabaaa
+				aaaaaaaabkaabaaaabaaaaaaaaaaaaajocaabaaaacaaaaaaagbjbaiaebaaaaaa
+				afaaaaaaagijcaaaabaaaaaaaeaaaaaabaaaaaahccaabaaaabaaaaaajgahbaaa
+				acaaaaaajgahbaaaacaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaa
+				dcaaaaakocaabaaaacaaaaaafgaobaaaacaaaaaafgafbaaaabaaaaaaagijcaaa
+				acaaaaaaaaaaaaaabaaaaaahccaabaaaabaaaaaajgahbaaaacaaaaaajgahbaaa
+				acaaaaaaeeaaaaafccaabaaaabaaaaaabkaabaaaabaaaaaadiaaaaahocaabaaa
+				acaaaaaafgafbaaaabaaaaaafgaobaaaacaaaaaabaaaaaahbcaabaaaabaaaaaa
+				igadbaaaabaaaaaajgahbaaaacaaaaaadeaaaaahbcaabaaaabaaaaaaakaabaaa
+				abaaaaaaabeaaaaaaaaaaaaacpaaaaafbcaabaaaabaaaaaaakaabaaaabaaaaaa
+				diaaaaaiccaabaaaabaaaaaaakiacaaaaaaaaaaaanaaaaaaabeaaaaaaaaaaaed
+				diaaaaahbcaabaaaabaaaaaaakaabaaaabaaaaaabkaabaaaabaaaaaabjaaaaaf
+				bcaabaaaabaaaaaaakaabaaaabaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaa
+				aaaaaaaaakaabaaaabaaaaaadiaaaaaihcaabaaaabaaaaaaagaabaaaaaaaaaaa
+				egiccaaaaaaaaaaaahaaaaaadcaaaaajocaabaaaaaaaaaaafgaobaaaaaaaaaaa
+				agaabaaaacaaaaaaagajbaaaabaaaaaadiaaaaaiocaabaaaaaaaaaaafgaobaaa
+				aaaaaaaaagijcaaaaaaaaaaaagaaaaaadiaaaaaidcaabaaaabaaaaaafgbfbaaa
+				afaaaaaaegiacaaaaaaaaaaaakaaaaaadcaaaaakdcaabaaaabaaaaaaegiacaaa
+				aaaaaaaaajaaaaaaagbabaaaafaaaaaaegaabaaaabaaaaaadcaaaaakdcaabaaa
+				abaaaaaaegiacaaaaaaaaaaaalaaaaaakgbkbaaaafaaaaaaegaabaaaabaaaaaa
+				aaaaaaaidcaabaaaabaaaaaaegaabaaaabaaaaaaegiacaaaaaaaaaaaamaaaaaa
+				efaaaaajpcaabaaaabaaaaaaegaabaaaabaaaaaaeghobaaaacaaaaaaaagabaaa
+				aaaaaaaadiaaaaahhccabaaaaaaaaaaajgahbaaaaaaaaaaapgapbaaaabaaaaaa
+				diaaaaajccaabaaaaaaaaaaadkiacaaaaaaaaaaaagaaaaaadkiacaaaaaaaaaaa
+				ahaaaaaadiaaaaahbcaabaaaaaaaaaaaakaabaaaaaaaaaaabkaabaaaaaaaaaaa
+				dcaaaaakiccabaaaaaaaaaaaakaabaaaaaaaaaaadkaabaaaabaaaaaabkiacaaa
+				aaaaaaaaanaaaaaadoaaaaab"
 		}
 		SubProgram "gles " {
 			Keywords{ "DIRECTIONAL_COOKIE" }
@@ -15985,17 +16691,20 @@ Shader "KSP/Specular Layered" {
 				"!!GLES3"
 		}
 		SubProgram "metal " {
-			// Stats: 43 math, 3 textures
+			// Stats: 47 math, 3 textures
 			Keywords{ "DIRECTIONAL_COOKIE" }
 				SetTexture 0[_LightTexture0] 2D 0
 				SetTexture 1[_MainTex] 2D 1
 				SetTexture 2[_Emissive] 2D 2
-				ConstBuffer "$Globals" 66
-				MatrixHalf 32[_LightMatrix0]
+				ConstBuffer "$Globals" 96
+				MatrixHalf 40[_LightMatrix0]
 				Vector 0[_WorldSpaceCameraPos] 3
 				VectorHalf 16[_WorldSpaceLightPos0] 4
 				VectorHalf 24[_LightColor0] 4
-				ScalarHalf 64[_Shininess]
+				VectorHalf 32[_SpecColor] 4
+				ScalarHalf 72[_Shininess]
+				Float 76[_Opacity]
+				Vector 80[_BurnColor]
 				"metal_fs
 #include <metal_stdlib>
 				using namespace metal;
@@ -16014,8 +16723,11 @@ Shader "KSP/Specular Layered" {
 				float3 _WorldSpaceCameraPos;
 				half4 _WorldSpaceLightPos0;
 				half4 _LightColor0;
+				half4 _SpecColor;
 				half4x4 _LightMatrix0;
 				half _Shininess;
+				float _Opacity;
+				float4 _BurnColor;
 			};
 			fragment xlatMtlShaderOutput xlatMtlMain(xlatMtlShaderInput _mtl_i[[stage_in]], constant xlatMtlShaderUniform& _mtl_u[[buffer(0)]]
 				,   texture2d<half> _LightTexture0[[texture(0)]], sampler _mtlsmp__LightTexture0[[sampler(0)]]
@@ -16024,80 +16736,94 @@ Shader "KSP/Specular Layered" {
 			{
 				xlatMtlShaderOutput _mtl_o;
 				half3 worldN_1;
-				half4 c_2;
-				half3 worldViewDir_3;
-				half3 lightDir_4;
-				float4 tmpvar_5;
-				half3 tmpvar_6;
-				tmpvar_6 = _mtl_u._WorldSpaceLightPos0.xyz;
-				lightDir_4 = tmpvar_6;
-				float3 tmpvar_7;
-				tmpvar_7 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
-				worldViewDir_3 = half3(tmpvar_7);
-				half3 tmpvar_8;
-				tmpvar_8 = normalize((worldViewDir_3 + lightDir_4));
-				worldViewDir_3 = tmpvar_8;
-				tmpvar_5 = float4(_mtl_i.xlv_COLOR0);
-				half3 tmpvar_9;
-				half tmpvar_10;
-				float4 mask_11;
-				float4 color_12;
+				half3 worldViewDir_2;
+				half3 lightDir_3;
+				float4 tmpvar_4;
+				half3 tmpvar_5;
+				tmpvar_5 = _mtl_u._WorldSpaceLightPos0.xyz;
+				lightDir_3 = tmpvar_5;
+				float3 tmpvar_6;
+				tmpvar_6 = normalize((_mtl_u._WorldSpaceCameraPos - _mtl_i.xlv_TEXCOORD4));
+				worldViewDir_2 = half3(tmpvar_6);
+				tmpvar_4 = float4(_mtl_i.xlv_COLOR0);
+				half3 tmpvar_7;
+				half tmpvar_8;
+				half tmpvar_9;
+				float4 mask_10;
+				float4 color_11;
+				half4 tmpvar_12;
+				tmpvar_12 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				color_11 = float4(tmpvar_12);
 				half4 tmpvar_13;
-				tmpvar_13 = _MainTex.sample(_mtlsmp__MainTex, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				color_12 = float4(tmpvar_13);
-				half4 tmpvar_14;
-				tmpvar_14 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
-				mask_11 = float4(tmpvar_14);
+				tmpvar_13 = _Emissive.sample(_mtlsmp__Emissive, (float2)(_mtl_i.xlv_TEXCOORD0.xy));
+				mask_10 = float4(tmpvar_13);
+				float2 tmpvar_14;
+				tmpvar_14.x = color_11.x;
+				tmpvar_14.y = mask_10.x;
 				float2 tmpvar_15;
-				tmpvar_15.x = color_12.x;
-				tmpvar_15.y = mask_11.x;
+				tmpvar_15.x = color_11.y;
+				tmpvar_15.y = mask_10.y;
 				float2 tmpvar_16;
-				tmpvar_16.x = color_12.y;
-				tmpvar_16.y = mask_11.y;
+				tmpvar_16.x = color_11.z;
+				tmpvar_16.y = mask_10.z;
 				float2 tmpvar_17;
-				tmpvar_17.x = color_12.z;
-				tmpvar_17.y = mask_11.z;
+				tmpvar_17.x = color_11.w;
+				tmpvar_17.y = mask_10.w;
 				float2 tmpvar_18;
-				tmpvar_18.x = color_12.w;
-				tmpvar_18.y = mask_11.w;
-				float2 tmpvar_19;
-				float tmpvar_20;
-				tmpvar_20 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
-				tmpvar_19 = mix(mix(tmpvar_15, tmpvar_16, float2(clamp(tmpvar_20, 0.0, 1.0))), mix(tmpvar_17, tmpvar_18, float2(clamp(
-					(tmpvar_20 - 2.0)
-					, 0.0, 1.0))), float2(clamp((tmpvar_20 - 1.0), 0.0, 1.0)));
-				float3 tmpvar_21;
-				tmpvar_21 = mix(tmpvar_19.xxx, mix(mix(float3(
-					clamp((tmpvar_19.x + ((1.0 - tmpvar_19.y) * (tmpvar_19.x * tmpvar_19.x))), 0.0, 1.0)
-					), tmpvar_5.xyz, tmpvar_19.yyy), tmpvar_5.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_5.w, 0.0, 1.0)));
-				tmpvar_9 = half3(tmpvar_21);
-				float tmpvar_22;
-				tmpvar_22 = pow(((1.0 - tmpvar_19.y) + 0.4), 3.0);
-				tmpvar_10 = half(((tmpvar_22 + 0.2) * tmpvar_19.y));
-				float4 tmpvar_23;
-				tmpvar_23.w = 1.0;
-				tmpvar_23.xyz = _mtl_i.xlv_TEXCOORD4;
-				float2 tmpvar_24;
-				tmpvar_24 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_23)).xy;
+				float tmpvar_19;
+				tmpvar_19 = (_mtl_i.xlv_TEXCOORD0.z * 3.0);
+				tmpvar_18 = mix(mix(tmpvar_14, tmpvar_15, float2(clamp(tmpvar_19, 0.0, 1.0))), mix(tmpvar_16, tmpvar_17, float2(clamp(
+					(tmpvar_19 - 2.0)
+					, 0.0, 1.0))), float2(clamp((tmpvar_19 - 1.0), 0.0, 1.0)));
+				float3 tmpvar_20;
+				tmpvar_20 = mix(tmpvar_18.xxx, mix(mix(float3(
+					clamp((tmpvar_18.x + ((1.0 - tmpvar_18.y) * (tmpvar_18.x * tmpvar_18.x))), 0.0, 1.0)
+					), tmpvar_4.xyz, tmpvar_18.yyy), tmpvar_4.xyz, _mtl_i.xlv_TEXCOORD0.www), float3(clamp(tmpvar_4.w, 0.0, 1.0)));
+				tmpvar_7 = half3((tmpvar_20 * _mtl_u._BurnColor.xyz));
+				float tmpvar_21;
+				tmpvar_21 = pow(((1.0 - tmpvar_18.y) + 0.4), 3.0);
+				tmpvar_8 = half(((tmpvar_21 + 0.2) * tmpvar_18.y));
+				tmpvar_9 = half(_mtl_u._Opacity);
+				float4 tmpvar_22;
+				tmpvar_22.w = 1.0;
+				tmpvar_22.xyz = _mtl_i.xlv_TEXCOORD4;
+				float2 tmpvar_23;
+				tmpvar_23 = ((float4)(_mtl_u._LightMatrix0 * (half4)tmpvar_22)).xy;
+				half tmpvar_24;
+				tmpvar_24 = _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(tmpvar_23)).w;
 				worldN_1.x = _mtl_i.xlv_TEXCOORD1.z;
 				worldN_1.y = _mtl_i.xlv_TEXCOORD2.z;
 				worldN_1.z = _mtl_i.xlv_TEXCOORD3.z;
-				half4 c_25;
-				half spec_26;
-				half3 tmpvar_27;
-				tmpvar_27 = normalize(worldN_1);
-				half tmpvar_28;
-				tmpvar_28 = max((half)0.0, dot(tmpvar_27, tmpvar_8));
-				half tmpvar_29;
-				tmpvar_29 = (pow(tmpvar_28, (_mtl_u._Shininess * (half)128.0)) * tmpvar_10);
-				spec_26 = tmpvar_29;
-				c_25.xyz = ((_mtl_u._LightColor0.xyz * (
-					(tmpvar_9 * max((half)0.0, dot(tmpvar_27, lightDir_4)))
-					+ spec_26)) * _LightTexture0.sample(_mtlsmp__LightTexture0, (float2)(tmpvar_24)).w);
-				c_25.w = half(1.0);
-				c_2.xyz = c_25.xyz;
-				c_2.w = half(1.0);
-				_mtl_o._glesFragData_0 = c_2;
+				half3 lightDir_25;
+				lightDir_25 = lightDir_3;
+				half3 viewDir_26;
+				viewDir_26 = worldViewDir_2;
+				half atn_27;
+				atn_27 = tmpvar_24;
+				half4 c_28;
+				half spec_29;
+				half diff_30;
+				half3 halfDir_31;
+				half3 tmpvar_32;
+				tmpvar_32 = normalize(worldN_1);
+				half3 tmpvar_33;
+				tmpvar_33 = normalize((lightDir_25 + viewDir_26));
+				halfDir_31 = tmpvar_33;
+				half tmpvar_34;
+				tmpvar_34 = max((half)0.0, dot(tmpvar_32, lightDir_25));
+				diff_30 = tmpvar_34;
+				half tmpvar_35;
+				tmpvar_35 = max((half)0.0, dot(tmpvar_32, halfDir_31));
+				half tmpvar_36;
+				tmpvar_36 = (pow(tmpvar_35, (_mtl_u._Shininess * (half)128.0)) * tmpvar_8);
+				spec_29 = tmpvar_36;
+				c_28.xyz = ((_mtl_u._LightColor0.xyz * (
+					(tmpvar_7 * diff_30)
+					+
+					(spec_29 * _mtl_u._SpecColor.xyz)
+					)) * atn_27);
+				c_28.w = (tmpvar_9 + ((_mtl_u._LightColor0.w * _mtl_u._SpecColor.w) * (spec_29 * atn_27)));
+				_mtl_o._glesFragData_0 = c_28;
 				return _mtl_o;
 			}
 
@@ -16110,5 +16836,5 @@ Shader "KSP/Specular Layered" {
 	}
 	}
 	}
-		Fallback "Diffuse"
+		Fallback "Specular"
 }
