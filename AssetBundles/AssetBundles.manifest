@@ -1,0 +1,13 @@
+ManifestFileVersion: 0
+CRC: 3305391379
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: wingshader
+      Dependencies: {}
+    Info_1:
+      Name: fesettings
+      Dependencies: {}
+    Info_2:
+      Name: squadcore
+      Dependencies: {}
